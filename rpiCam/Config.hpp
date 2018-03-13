@@ -5,7 +5,8 @@
 #include <memory>
 #include <list>
 #include <mutex>
-
+#include <thread>
+#include <atomic>
 
 #include <Eigen/Eigen>
 #include <Eigen/StdVector>

@@ -44,16 +44,22 @@ public:
     std::error_code stopVideo() override;
 
 private:
-    std::error_code applyCameraConfiguration();
-    std::error_code applyPreviewPortConfiguration();
-    std::error_code applyVideoPortConfiguration();
+    std::error_code applyVideoFormat(ePixelFormat fmt);
+    std::error_code applyVideoSize(Vec2ui const &sz);
+    std::error_code applyVideoFrameRate(Rational const &rate);
+
+    std::error_code initializeCameraControlPort();
+    std::error_code initializeVideoPort();
+    std::error_code initializeCapturePort();
 
     static void _mmalCameraControlCallback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer);
-    void mmalCameraControlCallback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer);
+    void mmalCameraControlCallback(MMAL_BUFFER_HEADER_T *buffer);
+
+    static void __mmalCameraVideoBufferCallback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer);
+    void mmalCameraVideoBufferCallback(MMAL_BUFFER_HEADER_T *buffer);
 
 private:
     std::shared_ptr<MMAL_COMPONENT_T> m_Camera;
-    MMAL_PORT_T *m_PreviewPort;
     MMAL_PORT_T *m_VideoPort;
     MMAL_PORT_T *m_CapturePort;
     std::string m_Name;
@@ -64,5 +70,9 @@ private:
     ePixelFormat m_VideoFormat;
     Vec2ui m_VideoSize;
     Rational m_VideoFrameRate;
+    bool m_bConfiguring;
+    bool m_bConfigurationChanged;
+
+    MMAL_POOL_T *m_VideoBufferPool;
 };
 

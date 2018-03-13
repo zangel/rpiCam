@@ -11,6 +11,7 @@ set(rpiCam_headers
     Device.hpp
     Camera.hpp
     rpi/RPICamera.hpp
+	rpi/RPIPixelSampleBuffer.hpp
 )
 
 set(rpiCam_sources
@@ -23,6 +24,7 @@ set(rpiCam_sources
     Device.cpp
     Camera.cpp
     rpi/RPICamera.cpp
+	rpi/RPIPixelSampleBuffer.cpp
 )
 
 add_library(rpiCam STATIC
