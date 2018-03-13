@@ -51,7 +51,7 @@ RPICamera::RPICamera(std::shared_ptr<MMAL_COMPONENT_T> camera, std::string const
     , m_SupportedVideoSizes()
     , m_VideoFrameRateMin()
     , m_VideoFrameRateMax()
-    , m_VideoFormat(kPixelFormatYUV420)
+    , m_VideoFormat(kPixelFormatRGB8)
     , m_VideoSize(1920, 1080)
     , m_VideoFrameRate(30, 1)
     , m_bConfiguring(false)
@@ -274,7 +274,7 @@ std::error_code RPICamera::startVideo()
         return std::make_error_code(std::errc::io_error);
     }
 
-    if (mmal_port_enable(m_VideoPort, RPICamera::__mmalCameraVideoBufferCallback) != MMAL_SUCCESS)
+    if (mmal_port_enable(m_VideoPort, RPICamera::_mmalCameraVideoBufferCallback) != MMAL_SUCCESS)
     {
         mmal_port_pool_destroy(m_VideoPort, m_VideoBufferPool);
         m_VideoBufferPool = nullptr;
@@ -290,6 +290,8 @@ std::error_code RPICamera::startVideo()
 
         mmal_port_send_buffer(m_VideoPort, buffer);
     }
+
+    mmal_port_parameter_set_boolean(m_VideoPort, MMAL_PARAMETER_CAPTURE, MMAL_TRUE);
 
     dispatchOnCameraVideoStarted();
 
@@ -309,6 +311,8 @@ std::error_code RPICamera::stopVideo()
 
     if (!isVideoStarted())
         return std::make_error_code(std::errc::not_connected);
+
+    mmal_port_parameter_set_boolean(m_VideoPort, MMAL_PARAMETER_CAPTURE, MMAL_FALSE);
 
     mmal_port_disable(m_VideoPort);
     while(mmal_queue_length(m_VideoBufferPool->queue) < m_VideoPort->buffer_num)
@@ -512,7 +516,7 @@ void RPICamera::mmalCameraControlCallback(MMAL_BUFFER_HEADER_T *buffer)
     mmal_buffer_header_release(buffer);
 }
 
-void RPICamera::__mmalCameraVideoBufferCallback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer)
+void RPICamera::_mmalCameraVideoBufferCallback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer)
 {
     RPICamera *rpiCamera = reinterpret_cast<RPICamera*>(port->component->userdata);
     if (!rpiCamera)

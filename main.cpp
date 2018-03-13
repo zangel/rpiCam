@@ -52,6 +52,7 @@ public:
             }
 
             buffer->unlock();
+            std::cout.flush();
         }
     }
 };

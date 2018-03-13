@@ -55,7 +55,7 @@ private:
     static void _mmalCameraControlCallback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer);
     void mmalCameraControlCallback(MMAL_BUFFER_HEADER_T *buffer);
 
-    static void __mmalCameraVideoBufferCallback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer);
+    static void _mmalCameraVideoBufferCallback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer);
     void mmalCameraVideoBufferCallback(MMAL_BUFFER_HEADER_T *buffer);
 
 private:
