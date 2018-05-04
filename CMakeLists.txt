@@ -8,6 +8,9 @@ link_directories(/opt/vc/lib)
 
 add_subdirectory(rpiCam)
 
-add_executable(rpiCamExample main.cpp)
+add_executable(rpiCamExample rpiCamExample.cpp)
 target_link_libraries(rpiCamExample rpiCam)
+
+add_executable(estimateMaxVideoFrameRate estimateMaxVideoFrameRate.cpp)
+target_link_libraries(estimateMaxVideoFrameRate rpiCam)
 
