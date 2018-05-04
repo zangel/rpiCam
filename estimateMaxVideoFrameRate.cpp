@@ -69,7 +69,7 @@ int main(int argc, char *argv[])
         if(!cam->open())
         {
             std::cout << "camera: " << cam->name() << std::endl;
-            cam->setVideoFrameRate(Rational(100, 1));
+            cam->setVideoFrameRate(Rational(200, 1));
             for(auto vs : videoSizes)
             {
                 std::cout << "	estVideoFrameRate(" << vs(0) << "x" << vs(1) <<"): ";
