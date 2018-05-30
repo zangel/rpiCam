@@ -1,12 +1,14 @@
 #include "Device.hpp"
 
-
-Device::Device()
-    : m_DeviceEvents()
+namespace rpiCam
 {
-}
+    Device::Device()
+        : m_DeviceEvents()
+    {
+    }
 
-Device::~Device()
-{
+    Device::~Device()
+    {
+    }
 }
 

@@ -2,72 +2,75 @@
 
 #include "Config.hpp"
 
-template <typename Events>
-class EventsDispatcher
+namespace rpiCam
 {
-protected:
-    using ThisType = EventsDispatcher<Events>;
-    using Subscriber = Events*;
-    using SubscriberList = std::list<Subscriber>;
-
-public:
-    EventsDispatcher()
-      : m_Mutex()
-      , m_Subscribers()
+    template <typename Events>
+    class EventsDispatcher
     {
+    protected:
+        using ThisType = EventsDispatcher<Events>;
+        using Subscriber = Events*;
+        using SubscriberList = std::list<Subscriber>;
 
-    }
+    public:
+        EventsDispatcher()
+          : m_Mutex()
+          , m_Subscribers()
+        {
 
-    ~EventsDispatcher()
-    {
-    }
+        }
 
-    void operator+=(Subscriber subscriber) const
-    {
-      const_cast<ThisType*>(this)->add(subscriber);
-    }
+        ~EventsDispatcher()
+        {
+        }
 
-    void operator-=(Subscriber subscriber) const
-    {
-      const_cast<ThisType*>(this)->remove(subscriber);
-    }
+        void operator+=(Subscriber subscriber) const
+        {
+          const_cast<ThisType*>(this)->add(subscriber);
+        }
 
-    template <typename Event, typename ...Args>
-    void dispatch(Event event, Args &&... args)
-    {
-      SubscriberList subscribers;
-      {
-        std::lock_guard<std::recursive_mutex> lock(m_Mutex);
-        subscribers = m_Subscribers;
-      }
+        void operator-=(Subscriber subscriber) const
+        {
+          const_cast<ThisType*>(this)->remove(subscriber);
+        }
 
-      for(auto subscriber : subscribers)
-      {
-        (subscriber->*event)(args...);
-      };
-    }
+        template <typename Event, typename ...Args>
+        void dispatch(Event event, Args &&... args)
+        {
+          SubscriberList subscribers;
+          {
+            std::lock_guard<std::recursive_mutex> lock(m_Mutex);
+            subscribers = m_Subscribers;
+          }
 
-private:
-    void add(Subscriber subscriber)
-    {
-      std::lock_guard<std::recursive_mutex> lock(m_Mutex);
-      m_Subscribers.push_front(subscriber);
-    }
+          for(auto subscriber : subscribers)
+          {
+            (subscriber->*event)(args...);
+          };
+        }
 
-    void remove(Subscriber subscriber)
-    {
-      std::lock_guard<std::recursive_mutex> lock(m_Mutex);
-      typename SubscriberList::iterator itSubscriber = std::find(
-        m_Subscribers.begin(),
-        m_Subscribers.end(),
-        subscriber
-      );
+    private:
+        void add(Subscriber subscriber)
+        {
+          std::lock_guard<std::recursive_mutex> lock(m_Mutex);
+          m_Subscribers.push_front(subscriber);
+        }
 
-      if(itSubscriber != m_Subscribers.end())
-        m_Subscribers.erase(itSubscriber);
-    }
+        void remove(Subscriber subscriber)
+        {
+          std::lock_guard<std::recursive_mutex> lock(m_Mutex);
+          typename SubscriberList::iterator itSubscriber = std::find(
+            m_Subscribers.begin(),
+            m_Subscribers.end(),
+            subscriber
+          );
 
-private:
-    mutable std::recursive_mutex m_Mutex;
-    mutable SubscriberList m_Subscribers;
-};
+          if(itSubscriber != m_Subscribers.end())
+            m_Subscribers.erase(itSubscriber);
+        }
+
+    private:
+        mutable std::recursive_mutex m_Mutex;
+        mutable SubscriberList m_Subscribers;
+    };
+}

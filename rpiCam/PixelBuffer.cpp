@@ -1,9 +1,12 @@
 #include "PixelBuffer.hpp"
 
-PixelBuffer::PixelBuffer()
+namespace rpiCam
 {
-}
+    PixelBuffer::PixelBuffer()
+    {
+    }
 
-PixelBuffer::~PixelBuffer()
-{
+    PixelBuffer::~PixelBuffer()
+    {
+    }
 }

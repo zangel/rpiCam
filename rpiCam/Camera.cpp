@@ -1,13 +1,16 @@
 #include "Camera.hpp"
 
-Camera::Camera()
-    : m_CameraEvents()
+namespace rpiCam
 {
+    Camera::Camera()
+        : m_CameraEvents()
+    {
 
-}
+    }
 
 
-Camera::~Camera()
-{
+    Camera::~Camera()
+    {
 
+    }
 }

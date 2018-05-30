@@ -1,9 +1,12 @@
 #include "SampleBuffer.hpp"
 
-SampleBuffer::SampleBuffer()
+namespace rpiCam
 {
-}
+    SampleBuffer::SampleBuffer()
+    {
+    }
 
-SampleBuffer::~SampleBuffer()
-{
+    SampleBuffer::~SampleBuffer()
+    {
+    }
 }

@@ -1,6 +1,8 @@
 #include "rpiCam/Camera.hpp"
 #include <iostream>
 
+using namespace rpiCam;
+
 class CameraEvents
     : public Device::Events
     , public Camera::Events

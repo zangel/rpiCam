@@ -2,9 +2,14 @@ cmake_minimum_required(VERSION 2.8)
 
 project(rpiCam)
 
-include_directories(3rdparty/eigen-3.3.4)
-include_directories(/opt/vc/include)
-link_directories(/opt/vc/lib)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mcpu=cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard")
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
+
+
+
+find_package(VideoCore REQUIRED)
+include_directories(${VIDEOCORE_INCLUDE_DIRS})
 
 add_subdirectory(rpiCam)
 

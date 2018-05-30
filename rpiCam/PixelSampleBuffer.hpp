@@ -4,12 +4,14 @@
 #include "PixelBuffer.hpp"
 #include "SampleBuffer.hpp"
 
-class PixelSampleBuffer
-    : public PixelBuffer
-    , public SampleBuffer
+namespace rpiCam
 {
-public:
-    PixelSampleBuffer();
-    virtual ~PixelSampleBuffer();
-};
-
+    class PixelSampleBuffer
+        : public PixelBuffer
+        , public SampleBuffer
+    {
+    public:
+        PixelSampleBuffer();
+        virtual ~PixelSampleBuffer();
+    };
+}

@@ -2,10 +2,13 @@
 
 #include "Config.hpp"
 
-typedef enum
+namespace rpiCam
 {
-    kPixelFormatInvalid=0,
-    kPixelFormatRGB8,
-    kPixelFormatYUV420,
-    kPixelFormatMax
-} ePixelFormat;
+    typedef enum
+    {
+        kPixelFormatInvalid=0,
+        kPixelFormatRGB8,
+        kPixelFormatYUV420,
+        kPixelFormatMax
+    } ePixelFormat;
+}

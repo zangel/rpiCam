@@ -1,10 +1,12 @@
 #include "Buffer.hpp"
 
-
-Buffer::Buffer()
+namespace rpiCam
 {
-}
+    Buffer::Buffer()
+    {
+    }
 
-Buffer::~Buffer()
-{
+    Buffer::~Buffer()
+    {
+    }
 }
