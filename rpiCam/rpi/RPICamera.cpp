@@ -39,6 +39,10 @@ namespace rpiCam
 
                 cameras.push_back(std::make_shared<RPICamera>(spCamera, name));
             }
+            if (cameras.empty())
+            {
+                RPI_LOG(DEBUG, "enumerateRPICameras(): found no cameras!");
+            }
             return cameras;
         }
     }
@@ -79,7 +83,7 @@ namespace rpiCam
 
     std::error_code RPICamera::open()
     {
-        RPI_LOG(DEBUG, "Camera::open(): opening camera '%s' ...", m_Name.c_str());
+        RPI_LOG(DEBUG, "Camera::open(): opening camera ...");
         if (isOpen())
         {
             RPI_LOG(WARNING, "Camera::open(): camera is already opened!");
@@ -131,14 +135,14 @@ namespace rpiCam
 
         dispatchOnDeviceOpened();
 
-        RPI_LOG(DEBUG, "Camera::open(): successfully opened camera '%s'!", m_Name.c_str());
+        RPI_LOG(DEBUG, "Camera::open(): successfully opened camera!");
 
         return std::error_code();
     }
 
     std::error_code RPICamera::close()
     {
-        RPI_LOG(DEBUG, "Camera::close(): closing camera '%s' ...", m_Name.c_str());
+        RPI_LOG(DEBUG, "Camera::close(): closing camera ...");
         if (!isOpen())
         {
             RPI_LOG(WARNING, "Camera::open(): camera is not open");
@@ -153,7 +157,7 @@ namespace rpiCam
 
         dispatchOnDeviceClosed();
 
-        RPI_LOG(DEBUG, "Camera::close(): successfully closed camera '%s'!", m_Name.c_str());
+        RPI_LOG(DEBUG, "Camera::close(): successfully closed camera!");
 
         return std::error_code();
     }
@@ -281,7 +285,7 @@ namespace rpiCam
 
     std::error_code RPICamera::startVideo()
     {
-        RPI_LOG(DEBUG, "Camera::startVideo(): starting video on camera '%s' ...", m_Name.c_str());
+        RPI_LOG(DEBUG, "Camera::startVideo(): starting video ...");
 
         if (!isOpen())
         {
@@ -334,7 +338,7 @@ namespace rpiCam
 
         dispatchOnCameraVideoStarted();
 
-        RPI_LOG(DEBUG, "Camera::startVideo(): video started successfully on camera '%s'!", m_Name.c_str());
+        RPI_LOG(DEBUG, "Camera::startVideo(): video started successfully!");
 
         return std::error_code();
     }
@@ -347,7 +351,7 @@ namespace rpiCam
 
     std::error_code RPICamera::stopVideo()
     {
-        RPI_LOG(DEBUG, "Camera::stopVideo(): stopping video on camera '%s' ...", m_Name.c_str());
+        RPI_LOG(DEBUG, "Camera::stopVideo(): stopping video ...");
 
         if (!isOpen())
         {
@@ -372,7 +376,7 @@ namespace rpiCam
 
         dispatchOnCameraVideoStopped();
 
-        RPI_LOG(DEBUG, "Camera::stopVideo(): video stopped successfully on camera '%s'!", m_Name.c_str());
+        RPI_LOG(DEBUG, "Camera::stopVideo(): video stopped successfully!");
 
         return std::error_code();
     }
@@ -404,7 +408,7 @@ namespace rpiCam
 
     std::error_code RPICamera::applyVideoSize(Vec2ui const &sz)
     {
-        RPI_LOG(DEBUG, "Camera::applyVideoSize(): applying video size on camera '%s' ...", m_Name.c_str());
+        RPI_LOG(DEBUG, "Camera::applyVideoSize(): applying video size ...");
 
         m_VideoPort->format->es->video.width = VCOS_ALIGN_UP(sz(0), 32);
         m_VideoPort->format->es->video.height = VCOS_ALIGN_UP(sz(1), 16);
@@ -433,14 +437,14 @@ namespace rpiCam
             return std::make_error_code(std::errc::io_error);
         }
 
-        RPI_LOG(DEBUG, "Camera::applyVideoSize(): video size applied successfully on camera '%s' ...", m_Name.c_str());
+        RPI_LOG(DEBUG, "Camera::applyVideoSize(): video size applied successfully!");
 
         return std::error_code();
     }
 
     std::error_code RPICamera::applyVideoFrameRate(Rational const &rate)
     {
-        RPI_LOG(DEBUG, "Camera::applyVideoFrameRate(): applying video frame rate on camera '%s' ...", m_Name.c_str());
+        RPI_LOG(DEBUG, "Camera::applyVideoFrameRate(): applying video frame rate ...");
 
         m_VideoPort->format->es->video.frame_rate.num = rate.numerator;
         m_VideoPort->format->es->video.frame_rate.den = rate.denominator;
@@ -451,7 +455,7 @@ namespace rpiCam
             return std::make_error_code(std::errc::io_error);
         }
 
-        RPI_LOG(DEBUG, "Camera::applyVideoFrameRate(): video frame rate applied successfully on camera '%s' ...", m_Name.c_str());
+        RPI_LOG(DEBUG, "Camera::applyVideoFrameRate(): video frame rate applied successfully!");
 
         return std::error_code();
     }
@@ -459,7 +463,7 @@ namespace rpiCam
 
     std::error_code RPICamera::initializeCameraControlPort()
     {
-        RPI_LOG(DEBUG, "Camera::initializeCameraControlPort(): initializing camera control port on '%s' ...", m_Name.c_str());
+        RPI_LOG(DEBUG, "Camera::initializeCameraControlPort(): initializing camera control port ...");
 
         MMAL_PARAMETER_CAMERA_CONFIG_T camConfig =
         {
@@ -485,14 +489,14 @@ namespace rpiCam
             return std::make_error_code(std::errc::io_error);
         }
 
-        RPI_LOG(DEBUG, "Camera::initializeCameraControlPort(): camera control port successfully initialized on '%s' ...", m_Name.c_str());
+        RPI_LOG(DEBUG, "Camera::initializeCameraControlPort(): camera control port successfully initialized!");
 
         return std::error_code();
     }
 
     std::error_code RPICamera::initializeVideoPort()
     {
-        RPI_LOG(DEBUG, "Camera::initializeVideoPort(): initializing video port on '%s' ...", m_Name.c_str());
+        RPI_LOG(DEBUG, "Camera::initializeVideoPort(): initializing video port ...");
 
         MMAL_PARAMETER_FPS_RANGE_T fpsRange =
         {
@@ -551,14 +555,14 @@ namespace rpiCam
             return std::make_error_code(std::errc::io_error);
         }
 
-        RPI_LOG(DEBUG, "Camera::initializeVideoPort(): video port successfully initialized on '%s' ...", m_Name.c_str());
+        RPI_LOG(DEBUG, "Camera::initializeVideoPort(): video port successfully initialized!");
 
         return std::error_code();
     }
 
     std::error_code RPICamera::initializeCapturePort()
     {
-        RPI_LOG(DEBUG, "Camera::initializeCapturePort(): initializing capture port on '%s' ...", m_Name.c_str());
+        RPI_LOG(DEBUG, "Camera::initializeCapturePort(): initializing capture ...");
 
         switch(m_VideoFormat)
         {
@@ -599,7 +603,7 @@ namespace rpiCam
               m_CapturePort->buffer_num = VIDEO_OUTPUT_BUFFERS_NUM;
 
 
-        RPI_LOG(DEBUG, "Camera::initializeCapturePort(): capture port successfully initialized on '%s' ...", m_Name.c_str());
+        RPI_LOG(DEBUG, "Camera::initializeCapturePort(): capture port successfully initialized!");
 
         return std::error_code();
     }
