@@ -4,6 +4,7 @@ find_package (Eigen3 3.3 REQUIRED NO_MODULE)
 
 set(rpiCam_headers
     Config.hpp
+    Logging.hpp
     Rational.hpp
     EventsDispatcher.hpp
     PixelFormat.hpp
@@ -22,6 +23,7 @@ set(rpiCam_headers_private
 
 set(rpiCam_sources
     Config.cpp
+    Logging.cpp
     Rational.cpp
     Buffer.cpp
     PixelBuffer.cpp

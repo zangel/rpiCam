@@ -1,4 +1,5 @@
 #include "rpiCam/Camera.hpp"
+#include "rpiCam/Logging.hpp"
 #include <iostream>
 
 using namespace rpiCam;
@@ -61,6 +62,7 @@ public:
 
 int main(int argc, char *argv[])
 {
+    setLogLevel(LOG_SILENT);
     CameraEvents cameraEvents;
 
     auto cameras = Device::list<Camera>();

@@ -1,4 +1,5 @@
 #include "rpiCam/Camera.hpp"
+#include "rpiCam/Logging.hpp"
 #include <iostream>
 
 using namespace rpiCam;
@@ -46,6 +47,7 @@ private:
 
 int main(int argc, char *argv[])
 {
+    setLogLevel(LOG_SILENT);
     std::vector<Vec2ui> videoSizes =
     {
         {640, 480},

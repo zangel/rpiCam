@@ -1,5 +1,6 @@
 #include "RPICamera.hpp"
 #include "RPIPixelSampleBuffer.hpp"
+#include "../Logging.hpp"
 
 #define MMAL_CAMERA_VIDEO_PORT          1
 #define MMAL_CAMERA_CAPTURE_PORT        2
@@ -78,58 +79,82 @@ namespace rpiCam
 
     std::error_code RPICamera::open()
     {
+        RPI_LOG(DEBUG, "Camera::open(): opening camera '%s' ...", m_Name.c_str());
         if (isOpen())
+        {
+            RPI_LOG(WARNING, "Camera::open(): camera is already opened!");
             return std::make_error_code(std::errc::already_connected);
+        }
 
         MMAL_PARAMETER_CHANGE_EVENT_REQUEST_T changeEventRequest =
             {{MMAL_PARAMETER_CHANGE_EVENT_REQUEST, sizeof(MMAL_PARAMETER_CHANGE_EVENT_REQUEST_T)}, MMAL_PARAMETER_CAMERA_SETTINGS, 1};
 
         if (mmal_port_parameter_set(m_Camera->control, &changeEventRequest.hdr) != MMAL_SUCCESS)
+        {
+            RPI_LOG(WARNING, "Camera::open(): mmal_port_parameter_set() failed!");
             return std::make_error_code(std::errc::io_error);
+        }
 
         if (mmal_port_enable(m_Camera->control, &RPICamera::_mmalCameraControlCallback) != MMAL_SUCCESS)
+        {
+            RPI_LOG(WARNING, "Camera::open(): mmal_port_enable() failed!");
             return std::make_error_code(std::errc::io_error);
+        }
 
         if (std::error_code acce = initializeCameraControlPort())
         {
+            RPI_LOG(WARNING, "Camera::open(): initializeCameraControlPort() failed!");
             mmal_port_disable(m_Camera->control);
             return acce;
         }
 
         if (std::error_code ivpe = initializeVideoPort())
         {
+            RPI_LOG(WARNING, "Camera::open(): initializeVideoPort() failed!");
             mmal_port_disable(m_Camera->control);
             return ivpe;
         }
 
         if (std::error_code ispe = initializeCapturePort())
         {
+            RPI_LOG(WARNING, "Camera::open(): initializeCapturePort() failed!");
             mmal_port_disable(m_Camera->control);
             return ispe;
         }
 
         if (mmal_component_enable(m_Camera.get()) != MMAL_SUCCESS)
         {
+            RPI_LOG(WARNING, "Camera::open(): mmal_component_enable() failed!");
             mmal_port_disable(m_Camera->control);
             return std::make_error_code(std::errc::io_error);
         }
 
         dispatchOnDeviceOpened();
 
+        RPI_LOG(DEBUG, "Camera::open(): successfully opened camera '%s'!", m_Name.c_str());
+
         return std::error_code();
     }
 
     std::error_code RPICamera::close()
     {
+        RPI_LOG(DEBUG, "Camera::close(): closing camera '%s' ...", m_Name.c_str());
         if (!isOpen())
+        {
+            RPI_LOG(WARNING, "Camera::open(): camera is not open");
             return std::make_error_code(std::errc::not_connected);
+        }
 
-        stopVideo();
+        if (isVideoStarted())
+            stopVideo();
 
         mmal_component_disable(m_Camera.get());
         mmal_port_disable(m_Camera->control);
 
         dispatchOnDeviceClosed();
+
+        RPI_LOG(DEBUG, "Camera::close(): successfully closed camera '%s'!", m_Name.c_str());
+
         return std::error_code();
     }
 
@@ -256,20 +281,32 @@ namespace rpiCam
 
     std::error_code RPICamera::startVideo()
     {
+        RPI_LOG(DEBUG, "Camera::startVideo(): starting video on camera '%s' ...", m_Name.c_str());
+
         if (!isOpen())
+        {
+            RPI_LOG(WARNING, "Camera::startVideo(): camera is not open");
             return std::make_error_code(std::errc::not_connected);
+        }
 
         if (isVideoStarted())
+        {
+            RPI_LOG(WARNING, "Camera::startVideo(): video already started!");
             return std::make_error_code(std::errc::already_connected);
+        }
 
         m_VideoBufferPool = mmal_port_pool_create(m_VideoPort, m_VideoPort->buffer_num, m_VideoPort->buffer_size);
         if (!m_VideoBufferPool)
+        {
+            RPI_LOG(WARNING, "Camera::startVideo(): mmal_port_pool_create() failed!");
             return std::make_error_code(std::errc::no_buffer_space);
+        }
 
         int const numVideoBuffers = mmal_queue_length(m_VideoBufferPool->queue);
 
         if (numVideoBuffers !=  m_VideoPort->buffer_num)
         {
+            RPI_LOG(WARNING, "Camera::startVideo(): m_VideoBufferPool length is zero!");
             mmal_port_pool_destroy(m_VideoPort, m_VideoBufferPool);
             m_VideoBufferPool = nullptr;
             return std::make_error_code(std::errc::io_error);
@@ -277,6 +314,7 @@ namespace rpiCam
 
         if (mmal_port_enable(m_VideoPort, RPICamera::_mmalCameraVideoBufferCallback) != MMAL_SUCCESS)
         {
+            RPI_LOG(WARNING, "Camera::startVideo(): mmal_port_enable() failed!");
             mmal_port_pool_destroy(m_VideoPort, m_VideoBufferPool);
             m_VideoBufferPool = nullptr;
             return std::make_error_code(std::errc::io_error);
@@ -296,6 +334,8 @@ namespace rpiCam
 
         dispatchOnCameraVideoStarted();
 
+        RPI_LOG(DEBUG, "Camera::startVideo(): video started successfully on camera '%s'!", m_Name.c_str());
+
         return std::error_code();
     }
 
@@ -307,11 +347,19 @@ namespace rpiCam
 
     std::error_code RPICamera::stopVideo()
     {
+        RPI_LOG(DEBUG, "Camera::stopVideo(): stopping video on camera '%s' ...", m_Name.c_str());
+
         if (!isOpen())
+        {
+            RPI_LOG(WARNING, "Camera::stopVideo(): camera is not open");
             return std::make_error_code(std::errc::not_connected);
+        }
 
         if (!isVideoStarted())
+        {
+            RPI_LOG(WARNING, "Camera::stopVideo(): video is not started");
             return std::make_error_code(std::errc::not_connected);
+        }
 
         mmal_port_parameter_set_boolean(m_VideoPort, MMAL_PARAMETER_CAPTURE, MMAL_FALSE);
 
@@ -323,6 +371,8 @@ namespace rpiCam
         m_VideoBufferPool = nullptr;
 
         dispatchOnCameraVideoStopped();
+
+        RPI_LOG(DEBUG, "Camera::stopVideo(): video stopped successfully on camera '%s'!", m_Name.c_str());
 
         return std::error_code();
     }
@@ -354,6 +404,8 @@ namespace rpiCam
 
     std::error_code RPICamera::applyVideoSize(Vec2ui const &sz)
     {
+        RPI_LOG(DEBUG, "Camera::applyVideoSize(): applying video size on camera '%s' ...", m_Name.c_str());
+
         m_VideoPort->format->es->video.width = VCOS_ALIGN_UP(sz(0), 32);
         m_VideoPort->format->es->video.height = VCOS_ALIGN_UP(sz(1), 16);
         m_VideoPort->format->es->video.crop.x = 0;
@@ -370,21 +422,36 @@ namespace rpiCam
 
 
         if (mmal_port_format_commit(m_VideoPort) != MMAL_SUCCESS)
+        {
+            RPI_LOG(WARNING, "Camera::applyVideoSize(): mmal_port_format_commit(m_VideoPort) failed");
             return std::make_error_code(std::errc::io_error);
+        }
 
         if (mmal_port_format_commit(m_CapturePort) != MMAL_SUCCESS)
+        {
+            RPI_LOG(WARNING, "Camera::applyVideoSize(): mmal_port_format_commit(m_CapturePort) failed");
             return std::make_error_code(std::errc::io_error);
+        }
+
+        RPI_LOG(DEBUG, "Camera::applyVideoSize(): video size applied successfully on camera '%s' ...", m_Name.c_str());
 
         return std::error_code();
     }
 
     std::error_code RPICamera::applyVideoFrameRate(Rational const &rate)
     {
+        RPI_LOG(DEBUG, "Camera::applyVideoFrameRate(): applying video frame rate on camera '%s' ...", m_Name.c_str());
+
         m_VideoPort->format->es->video.frame_rate.num = rate.numerator;
         m_VideoPort->format->es->video.frame_rate.den = rate.denominator;
 
         if (mmal_port_format_commit(m_VideoPort) != MMAL_SUCCESS)
+        {
+            RPI_LOG(WARNING, "Camera::applyVideoFrameRate(): mmal_port_format_commit(m_VideoPort) failed");
             return std::make_error_code(std::errc::io_error);
+        }
+
+        RPI_LOG(DEBUG, "Camera::applyVideoFrameRate(): video frame rate applied successfully on camera '%s' ...", m_Name.c_str());
 
         return std::error_code();
     }
@@ -392,6 +459,8 @@ namespace rpiCam
 
     std::error_code RPICamera::initializeCameraControlPort()
     {
+        RPI_LOG(DEBUG, "Camera::initializeCameraControlPort(): initializing camera control port on '%s' ...", m_Name.c_str());
+
         MMAL_PARAMETER_CAMERA_CONFIG_T camConfig =
         {
             {
@@ -411,13 +480,20 @@ namespace rpiCam
         };
 
         if (mmal_port_parameter_set(m_Camera->control, &camConfig.hdr) != MMAL_SUCCESS)
+        {
+            RPI_LOG(WARNING, "Camera::initializeCameraControlPort(): mmal_port_parameter_set(m_VideoPort) failed");
             return std::make_error_code(std::errc::io_error);
+        }
+
+        RPI_LOG(DEBUG, "Camera::initializeCameraControlPort(): camera control port successfully initialized on '%s' ...", m_Name.c_str());
 
         return std::error_code();
     }
 
     std::error_code RPICamera::initializeVideoPort()
     {
+        RPI_LOG(DEBUG, "Camera::initializeVideoPort(): initializing video port on '%s' ...", m_Name.c_str());
+
         MMAL_PARAMETER_FPS_RANGE_T fpsRange =
         {
             {MMAL_PARAMETER_FPS_RANGE, sizeof(fpsRange)},
@@ -426,7 +502,10 @@ namespace rpiCam
         };
 
         if (mmal_port_parameter_set(m_VideoPort, &fpsRange.hdr) != MMAL_SUCCESS)
+        {
+            RPI_LOG(WARNING, "Camera::initializeVideoPort(): mmal_port_parameter_set(m_VideoPort) failed");
             return std::make_error_code(std::errc::io_error);
+        }
 
         switch(m_VideoFormat)
         {
@@ -441,7 +520,10 @@ namespace rpiCam
             break;
 
         default:
-            return std::make_error_code(std::errc::io_error);
+            {
+                RPI_LOG(WARNING, "Camera::initializeVideoPort(): unsupported video format %d", m_VideoFormat);
+                return std::make_error_code(std::errc::io_error);
+            }
             break;
         }
 
@@ -455,19 +537,29 @@ namespace rpiCam
         m_VideoPort->format->es->video.frame_rate.den = m_VideoFrameRate.denominator;
 
         if (mmal_port_format_commit(m_VideoPort) != MMAL_SUCCESS)
+        {
+            RPI_LOG(WARNING, "Camera::initializeVideoPort(): mmal_port_format_commit() failed");
             return std::make_error_code(std::errc::io_error);
+        }
 
         if (m_VideoPort->buffer_num < VIDEO_OUTPUT_BUFFERS_NUM)
               m_VideoPort->buffer_num = VIDEO_OUTPUT_BUFFERS_NUM;
 
         if (mmal_port_parameter_set_boolean(m_VideoPort, MMAL_PARAMETER_ZERO_COPY, MMAL_TRUE) != MMAL_SUCCESS)
+        {
+            RPI_LOG(WARNING, "Camera::initializeVideoPort(): mmal_port_parameter_set_boolean() failed");
             return std::make_error_code(std::errc::io_error);
+        }
+
+        RPI_LOG(DEBUG, "Camera::initializeVideoPort(): video port successfully initialized on '%s' ...", m_Name.c_str());
 
         return std::error_code();
     }
 
     std::error_code RPICamera::initializeCapturePort()
     {
+        RPI_LOG(DEBUG, "Camera::initializeCapturePort(): initializing capture port on '%s' ...", m_Name.c_str());
+
         switch(m_VideoFormat)
         {
         case kPixelFormatRGB8:
@@ -481,7 +573,10 @@ namespace rpiCam
             break;
 
         default:
-            return std::make_error_code(std::errc::io_error);
+            {
+                RPI_LOG(WARNING, "Camera::initializeCapturePort(): unsupported video format %d", m_VideoFormat);
+                return std::make_error_code(std::errc::io_error);
+            }
             break;
         }
 
@@ -495,10 +590,16 @@ namespace rpiCam
         m_CapturePort->format->es->video.frame_rate.den = 1;
 
         if (mmal_port_format_commit(m_CapturePort) != MMAL_SUCCESS)
+        {
+            RPI_LOG(WARNING, "Camera::initializeCapturePort(): mmal_port_format_commit() failed");
             return std::make_error_code(std::errc::io_error);
+        }
 
         if (m_CapturePort->buffer_num < VIDEO_OUTPUT_BUFFERS_NUM)
               m_CapturePort->buffer_num = VIDEO_OUTPUT_BUFFERS_NUM;
+
+
+        RPI_LOG(DEBUG, "Camera::initializeCapturePort(): capture port successfully initialized on '%s' ...", m_Name.c_str());
 
         return std::error_code();
     }
