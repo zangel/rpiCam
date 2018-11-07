@@ -20,6 +20,7 @@ namespace rpiCam
             virtual void onCameraVideoStarted() {}
             virtual void onCameraVideoStopped() {}
             virtual void onCameraVideoFrame(std::shared_ptr<PixelSampleBuffer> const &buffer) {}
+            virtual void onCameraSnapshotTaken(std::shared_ptr<PixelSampleBuffer> const &buffer) {}
 
         };
 
@@ -42,10 +43,18 @@ namespace rpiCam
         virtual Rational getVideoFrameRate() const = 0;
         virtual std::error_code setVideoFrameRate(Rational const &rate) = 0;
 
-
         virtual std::error_code startVideo() = 0;
         virtual bool isVideoStarted() const = 0;
         virtual std::error_code stopVideo() = 0;
+
+        virtual std::list<ePixelFormat> const& getSupportedSnapshotFormats() const = 0;
+        virtual std::list<Vec2ui> const& getSupportedSnapshotSizes() const = 0;
+        virtual ePixelFormat getSnapshotFormat() const = 0;
+        virtual std::error_code setSnapshotFormat(ePixelFormat fmt) = 0;
+        virtual Vec2ui getSnapshotSize() const = 0;
+        virtual std::error_code setSnapshotSize(Vec2ui const &sz) = 0;
+
+        virtual std::error_code takeSnapshot() = 0;
 
         inline CameraEvents const& cameraEvents() const { return m_CameraEvents; }
 
@@ -68,6 +77,11 @@ namespace rpiCam
         inline void dispatchOnCameraVideoFrame(std::shared_ptr<PixelSampleBuffer> const &buffer)
         {
             m_CameraEvents.dispatch(&Events::onCameraVideoFrame, buffer);
+        }
+
+        inline void dispatchOnCameraSnapshotTaken(std::shared_ptr<PixelSampleBuffer> const &buffer)
+        {
+            m_CameraEvents.dispatch(&Events::onCameraSnapshotTaken, buffer);
         }
 
     protected:
