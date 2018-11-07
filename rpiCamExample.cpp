@@ -1,6 +1,7 @@
 #include "rpiCam/Camera.hpp"
 #include "rpiCam/Logging.hpp"
 #include <iostream>
+#include <fstream>
 
 using namespace rpiCam;
 
@@ -36,8 +37,41 @@ public:
 
     void onCameraVideoFrame(std::shared_ptr<PixelSampleBuffer> const &buffer) override
     {
-        std::cout << "onCameraVideoFrame():" << std::endl;
+        //std::cout << "onCameraVideoFrame():" << std::endl;
+        //dumpBufferInfo(buffer);
+        //saveBuffer(buffer, "video.ppm");
+    }
 
+    void saveBuffer(std::shared_ptr<PixelSampleBuffer> const &buffer, std::string name)
+    {
+        if(!buffer->lock())
+        {
+            std::ofstream ppm(name, std::ios::binary);
+            ppm << "P6" << std::endl;
+            ppm << buffer->planeSize()[0] << " " << buffer->planeSize()[1] << std::endl;
+            ppm << "255" << std::endl;
+
+            char *data = reinterpret_cast<char*>(buffer->planeData());
+            std::size_t rowBytes = buffer->planeRowBytes();
+
+            for (int y = 0; y < buffer->planeSize()[1]; ++y)
+            {
+                ppm.write(data, 3 * buffer->planeSize()[0]);
+                data += rowBytes;
+            }
+            buffer->unlock();
+        }
+    }
+
+    void onCameraSnapshotTaken(std::shared_ptr<PixelSampleBuffer> const &buffer) override
+    {
+        std::cout << "onCameraSnapshotTaken():" << std::endl;
+        //dumpBufferInfo(buffer);
+        //saveBuffer(buffer, "snapshot.ppm");
+    }
+
+    void dumpBufferInfo(std::shared_ptr<PixelSampleBuffer> const &buffer)
+    {
         if(!buffer->lock())
         {
             std::cout
@@ -74,9 +108,14 @@ int main(int argc, char *argv[])
 
         if(!cam->open())
         {
+            cam->setVideoSize(Vec2ui(1920, 1080));
+            cam->setSnapshotSize(Vec2ui(2592, 1944));
+            cam->setVideoFrameRate(Rational(30, 1));
             if(!cam->startVideo())
             {
                 std::this_thread::sleep_for(std::chrono::seconds(1));
+                cam->takeSnapshot();
+                std::this_thread::sleep_for(std::chrono::seconds(5));
                 cam->stopVideo();
             }
             cam->close();
