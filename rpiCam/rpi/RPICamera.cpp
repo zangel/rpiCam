@@ -825,8 +825,15 @@ namespace rpiCam
     void RPICamera::disableVideoPort()
     {
         mmal_port_disable(m_VideoPort);
-        while(mmal_queue_length(m_VideoBufferPool->queue) < m_VideoPort->buffer_num)
-            std::this_thread::yield();
+        // flush all video buffers
+        mmal_port_flush(m_VideoPort);
+        //while(mmal_queue_length(m_VideoBufferPool->queue) < m_VideoPort->buffer_num)
+        //    std::this_thread::yield();
+        int const numBuffersInUse = (m_VideoPort->buffer_num - mmal_queue_length(m_VideoBufferPool->queue));
+        if (numBuffersInUse)
+        {
+            RPI_LOG(WARNING, "Camera::disableVideoPort(): detected buffers in use after flush: %d!", numBuffersInUse);
+        }
 
         mmal_port_pool_destroy(m_VideoPort, m_VideoBufferPool);
         m_VideoBufferPool = nullptr;
@@ -838,8 +845,15 @@ namespace rpiCam
             std::this_thread::yield();
 
         mmal_port_disable(m_SnapshotPort);
-        while(mmal_queue_length(m_SnapshotBufferPool->queue) < m_SnapshotPort->buffer_num)
-            std::this_thread::yield();
+        // flush all snapshot buffers
+        mmal_port_flush(m_SnapshotPort);
+        //while(mmal_queue_length(m_SnapshotBufferPool->queue) < m_SnapshotPort->buffer_num)
+        //    std::this_thread::yield();
+        int const numBuffersInUse = (m_SnapshotPort->buffer_num - mmal_queue_length(m_SnapshotBufferPool->queue));
+        if (numBuffersInUse)
+        {
+            RPI_LOG(WARNING, "Camera::disableSnapshotPort(): detected buffers in use after flush: %d!", numBuffersInUse);
+        }
 
         mmal_port_pool_destroy(m_SnapshotPort, m_SnapshotBufferPool);
         m_SnapshotBufferPool = nullptr;
