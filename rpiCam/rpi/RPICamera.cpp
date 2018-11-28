@@ -1210,6 +1210,7 @@ namespace rpiCam
             std::shared_ptr<PixelSampleBuffer> pixelSampleBuffer = std::make_shared<RPIPixelSampleBuffer>(
                 buffer,
                 m_VideoSize,
+                Vec2ui(m_VideoPort->format->es->video.width, m_VideoPort->format->es->video.height),
                 m_VideoFormat
             );
             dispatchOnCameraVideoFrame(pixelSampleBuffer);
@@ -1245,6 +1246,7 @@ namespace rpiCam
                 std::shared_ptr<PixelSampleBuffer> pixelSampleBuffer = std::make_shared<RPIPixelSampleBuffer>(
                     buffer,
                     m_SnapshotSize,
+                    Vec2ui(m_SnapshotPort->format->es->video.width, m_SnapshotPort->format->es->video.height),
                     m_SnapshotFormat
                 );
                 dispatchOnCameraSnapshotTaken(pixelSampleBuffer);

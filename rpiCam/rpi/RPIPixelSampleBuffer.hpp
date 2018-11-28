@@ -10,7 +10,7 @@ namespace rpiCam
         : public PixelSampleBuffer
     {
     public:
-        RPIPixelSampleBuffer(MMAL_BUFFER_HEADER_T *buffer, Vec2ui const &size, ePixelFormat format);
+        RPIPixelSampleBuffer(MMAL_BUFFER_HEADER_T *buffer, Vec2ui const &size, Vec2ui const &rsize, ePixelFormat format);
         ~RPIPixelSampleBuffer();
 
         // Buffer overrides
@@ -36,6 +36,7 @@ namespace rpiCam
     private:
         MMAL_BUFFER_HEADER_T *m_Buffer;
         Vec2ui m_Size;
+        Vec2ui m_RealSize;
         ePixelFormat m_Format;
         std::atomic<uint32_t> m_LockCounter;
         std::size_t m_PlaneCount;
