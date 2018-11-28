@@ -2,6 +2,7 @@
 #include "RPIPixelSampleBuffer.hpp"
 #include "../Logging.hpp"
 
+#define MMAL_CAMERA_PREVIEW_PORT        0
 #define MMAL_CAMERA_VIDEO_PORT          1
 #define MMAL_CAMERA_SNAPSHOT_PORT       2
 
@@ -50,6 +51,7 @@ namespace rpiCam
     RPICamera::RPICamera(std::shared_ptr<MMAL_COMPONENT_T> camera, std::string const &name)
         : Camera()
         , m_Camera(camera)
+        , m_PreviewPort(m_Camera->output[MMAL_CAMERA_PREVIEW_PORT])
         , m_VideoPort(m_Camera->output[MMAL_CAMERA_VIDEO_PORT])
         , m_SnapshotPort(m_Camera->output[MMAL_CAMERA_SNAPSHOT_PORT])
         , m_Name(name)
@@ -57,13 +59,13 @@ namespace rpiCam
         , m_SupportedVideoSizes()
         , m_VideoFrameRateMin()
         , m_VideoFrameRateMax()
-        , m_VideoFormat(kPixelFormatRGB8)
+        , m_VideoFormat(kPixelFormatYUV420)
         , m_VideoSize(1920, 1080)
-        , m_VideoFrameRate(30, 1)
+        , m_VideoFrameRate(60, 1)
         , m_SupportedSnapshotFormats()
         , m_SupportedSnapshotSizes()
-        , m_SnapshotFormat(kPixelFormatRGB8)
-        , m_SnapshotSize(2592, 1944)
+        , m_SnapshotFormat(kPixelFormatYUV420)
+        , m_SnapshotSize(1920, 1080)
         , m_bConfiguring(false)
         , m_bConfigurationChanged(false)
         , m_bTakingSnapshot(false)
@@ -119,6 +121,15 @@ namespace rpiCam
             return acce;
         }
 
+        /*
+        if (std::error_code ippe = initializePreviewPort())
+        {
+            RPI_LOG(WARNING, "Camera::open(): initializePreviewPort() failed!");
+            mmal_port_disable(m_Camera->control);
+            return ippe;
+        }
+        */
+
         if (std::error_code ivpe = initializeVideoPort())
         {
             RPI_LOG(WARNING, "Camera::open(): initializeVideoPort() failed!");
@@ -158,6 +169,9 @@ namespace rpiCam
 
         if (isVideoStarted())
             stopVideo();
+
+        if (isTakingSnapshotsStarted())
+            stopTakingSnapshots();
 
         mmal_component_disable(m_Camera.get());
         mmal_port_disable(m_Camera->control);
@@ -311,13 +325,6 @@ namespace rpiCam
             return std::make_error_code(std::errc::io_error);
         }
 
-        if (std::error_code espe = enableSnapshotPort())
-        {
-            RPI_LOG(WARNING, "Camera::startVideo(): could not enable snapshot port!");
-            disableVideoPort();
-            return std::make_error_code(std::errc::io_error);
-        }
-
         mmal_port_parameter_set_boolean(m_VideoPort, MMAL_PARAMETER_CAPTURE, MMAL_TRUE);
 
         dispatchOnCameraVideoStarted();
@@ -352,7 +359,6 @@ namespace rpiCam
         mmal_port_parameter_set_boolean(m_VideoPort, MMAL_PARAMETER_CAPTURE, MMAL_FALSE);
 
         disableVideoPort();
-        disableSnapshotPort();
 
         dispatchOnCameraVideoStopped();
 
@@ -421,6 +427,65 @@ namespace rpiCam
         return std::error_code();
     }
 
+    std::error_code RPICamera::startTakingSnapshots()
+    {
+        RPI_LOG(DEBUG, "Camera::startTakingSnapshots(): starting snapshots taking ...");
+
+        if (!isOpen())
+        {
+            RPI_LOG(WARNING, "Camera::startTakingSnapshots(): camera is not open");
+            return std::make_error_code(std::errc::not_connected);
+        }
+
+        if (isTakingSnapshotsStarted())
+        {
+            RPI_LOG(WARNING, "Camera::startTakingSnapshots(): snapshots taking already started!");
+            return std::make_error_code(std::errc::already_connected);
+        }
+
+        if (std::error_code espe = enableSnapshotPort())
+        {
+            RPI_LOG(WARNING, "Camera::startTakingSnapshots(): could not enable snapshot port!");
+            return std::make_error_code(std::errc::io_error);
+        }
+
+        dispatchOnCameraTakingSnapshotsStarted();
+
+        RPI_LOG(DEBUG, "Camera::startTakingSnapshots(): taking snapshots started successfully!");
+
+        return std::error_code();
+    }
+
+    bool RPICamera::isTakingSnapshotsStarted() const
+    {
+        return m_SnapshotPort->is_enabled;
+    }
+
+    std::error_code RPICamera::stopTakingSnapshots()
+    {
+        RPI_LOG(DEBUG, "Camera::stopTakingSnapshots(): stopping taking snapshots ...");
+
+        if (!isOpen())
+        {
+            RPI_LOG(WARNING, "Camera::stopTakingSnapshots(): camera is not open");
+            return std::make_error_code(std::errc::not_connected);
+        }
+
+        if (!isTakingSnapshotsStarted())
+        {
+            RPI_LOG(WARNING, "Camera::stopTakingSnapshots(): taking snapshots is not started");
+            return std::make_error_code(std::errc::not_connected);
+        }
+
+        disableSnapshotPort();
+
+        dispatchOnCameraTakingSnapshotsStopped();
+
+        RPI_LOG(DEBUG, "Camera::stopTakingSnapshots(): taking snapshots stopped successfully!");
+
+        return std::error_code();
+    }
+
     std::error_code RPICamera::takeSnapshot()
     {
         RPI_LOG(DEBUG, "Camera::takeSnapshot(): taking snapshot ...");
@@ -431,9 +496,9 @@ namespace rpiCam
             return std::make_error_code(std::errc::not_connected);
         }
 
-        if (!isVideoStarted())
+        if (!isTakingSnapshotsStarted())
         {
-            RPI_LOG(WARNING, "Camera::takeSnapshot(): video is not started!");
+            RPI_LOG(WARNING, "Camera::takeSnapshot(): taking snapshots is not started!");
             return std::make_error_code(std::errc::not_connected);
         }
 
@@ -443,23 +508,154 @@ namespace rpiCam
             return std::make_error_code(std::errc::connection_already_in_progress);
         }
 
-        /*if (m_SnapshotBufferPool)
-        {
-            disableSnapshotPort();
-        }
-        enableSnapshotPort();
-        */
-
         m_bTakingSnapshot = true;
         mmal_port_parameter_set_boolean(m_SnapshotPort, MMAL_PARAMETER_CAPTURE, MMAL_TRUE);
-
-        //MMAL_PARAMETER_CAPTURE_STATUS_T
 
         RPI_LOG(DEBUG, "Camera::takeSnapshot(): snapshot taken successfully!");
 
         return std::error_code();
     }
 
+    std::error_code RPICamera::applyCameraControlSize(Vec2ui const &vsz, Vec2ui const &ssz)
+    {
+        MMAL_PARAMETER_CAMERA_CONFIG_T camConfig =
+        {
+            {
+                MMAL_PARAMETER_CAMERA_CONFIG,
+                sizeof(camConfig)
+            },
+            .max_stills_w = ssz(0),
+            .max_stills_h = ssz(1),
+            .stills_yuv422 = 0,
+            .one_shot_stills = 1,
+            .max_preview_video_w = vsz(0),
+            .max_preview_video_h = vsz(1),
+            .num_preview_video_frames = 3,
+            .stills_capture_circular_buffer_height = 0,
+            .fast_preview_resume = 0,
+            .use_stc_timestamp = MMAL_PARAM_TIMESTAMP_MODE_RESET_STC
+        };
+
+        if (mmal_port_parameter_set(m_Camera->control, &camConfig.hdr) != MMAL_SUCCESS)
+        {
+            RPI_LOG(WARNING, "Camera::initializeCameraControlPort(): mmal_port_parameter_set(m_VideoPort) failed");
+            return std::make_error_code(std::errc::io_error);
+        }
+
+        return std::error_code();
+    }
+
+    std::error_code RPICamera::applyCameraControlSaturation(float saturation)
+    {
+        MMAL_RATIONAL_T value = { static_cast<int>(saturation * 100), 100 };
+        if (mmal_port_parameter_set_rational(m_Camera->control, MMAL_PARAMETER_SATURATION, value) != MMAL_SUCCESS)
+            return std::make_error_code(std::errc::invalid_argument);
+        return std::error_code();
+    }
+
+    std::error_code RPICamera::applyCameraControlSharpness(float sharpness)
+    {
+        MMAL_RATIONAL_T value = { static_cast<int>(sharpness * 100), 100 };
+        if (mmal_port_parameter_set_rational(m_Camera->control, MMAL_PARAMETER_SHARPNESS, value) != MMAL_SUCCESS)
+            return std::make_error_code(std::errc::invalid_argument);
+        return std::error_code();
+    }
+
+    std::error_code RPICamera::applyCameraControlContrast(float contrast)
+    {
+        MMAL_RATIONAL_T value = { static_cast<int>(contrast * 100), 100 };
+        if (mmal_port_parameter_set_rational(m_Camera->control, MMAL_PARAMETER_CONTRAST, value) != MMAL_SUCCESS)
+            return std::make_error_code(std::errc::invalid_argument);
+        return std::error_code();
+    }
+
+    std::error_code RPICamera::applyCameraControlBrightness(float brightness)
+    {
+        MMAL_RATIONAL_T value = { static_cast<int>(brightness * 100), 100 };
+        if (mmal_port_parameter_set_rational(m_Camera->control, MMAL_PARAMETER_BRIGHTNESS, value) != MMAL_SUCCESS)
+            return std::make_error_code(std::errc::invalid_argument);
+        return std::error_code();
+    }
+
+    std::error_code RPICamera::applyCameraControlISO(int ISO)
+    {
+        if (mmal_port_parameter_set_uint32(m_Camera->control, MMAL_PARAMETER_ISO, ISO) != MMAL_SUCCESS)
+            return std::make_error_code(std::errc::invalid_argument);
+        return std::error_code();
+    }
+
+    std::error_code RPICamera::applyCameraControlVideoStabilisation(bool videoStabilisation)
+    {
+        if (mmal_port_parameter_set_boolean(m_Camera->control, MMAL_PARAMETER_VIDEO_STABILISATION, videoStabilisation?MMAL_TRUE:MMAL_FALSE) != MMAL_SUCCESS)
+            return std::make_error_code(std::errc::invalid_argument);
+        return std::error_code();
+    }
+
+    std::error_code RPICamera::applyCameraControlExposureCompensation(int exposureCompensation)
+    {
+        if (mmal_port_parameter_set_int32(m_Camera->control, MMAL_PARAMETER_EXPOSURE_COMP, exposureCompensation) != MMAL_SUCCESS)
+            return std::make_error_code(std::errc::invalid_argument);
+        return std::error_code();
+    }
+
+    std::error_code RPICamera::applyCameraControlExposureMode(MMAL_PARAM_EXPOSUREMODE_T  exposureMode)
+    {
+        MMAL_PARAMETER_EXPOSUREMODE_T value = { { MMAL_PARAMETER_EXPOSURE_MODE, sizeof(value) }, exposureMode };
+        if (mmal_port_parameter_set(m_Camera->control, &value.hdr) != MMAL_SUCCESS)
+            return std::make_error_code(std::errc::invalid_argument);
+        return std::error_code();
+    }
+
+    std::error_code RPICamera::applyCameraControlFlickerAvoidMode(MMAL_PARAM_FLICKERAVOID_T  flickerAvoidMode)
+    {
+        MMAL_PARAMETER_FLICKERAVOID_T value = { { MMAL_PARAMETER_FLICKER_AVOID, sizeof(value) }, flickerAvoidMode };
+        if (mmal_port_parameter_set(m_Camera->control, &value.hdr) != MMAL_SUCCESS)
+            return std::make_error_code(std::errc::invalid_argument);
+        return std::error_code();
+    }
+
+    std::error_code RPICamera::applyCameraControlExposureMeteringMode(MMAL_PARAM_EXPOSUREMETERINGMODE_T  exposureMeteringMode)
+    {
+        MMAL_PARAMETER_EXPOSUREMETERINGMODE_T value = { { MMAL_PARAMETER_EXP_METERING_MODE, sizeof(value) }, exposureMeteringMode };
+        if (mmal_port_parameter_set(m_Camera->control, &value.hdr) != MMAL_SUCCESS)
+            return std::make_error_code(std::errc::invalid_argument);
+        return std::error_code();
+    }
+
+    std::error_code RPICamera::applyCameraControlAWBMode(MMAL_PARAM_AWBMODE_T  awbMode)
+    {
+        MMAL_PARAMETER_AWBMODE_T value = { { MMAL_PARAMETER_AWB_MODE, sizeof(value) }, awbMode };
+        if (mmal_port_parameter_set(m_Camera->control, &value.hdr) != MMAL_SUCCESS)
+            return std::make_error_code(std::errc::invalid_argument);
+        return std::error_code();
+    }
+
+    std::error_code RPICamera::applyCameraControlShutterSpeed(int shutterSpeed)
+    {
+        if (mmal_port_parameter_set_uint32(m_Camera->control, MMAL_PARAMETER_SHUTTER_SPEED, shutterSpeed) != MMAL_SUCCESS)
+            return std::make_error_code(std::errc::invalid_argument);
+        return std::error_code();
+    }
+
+    std::error_code RPICamera::applyCameraControlDRC(MMAL_PARAMETER_DRC_STRENGTH_T drc)
+    {
+        MMAL_PARAMETER_DRC_T value = { { MMAL_PARAMETER_DYNAMIC_RANGE_COMPRESSION, sizeof(value) }, drc };
+        if (mmal_port_parameter_set(m_Camera->control, &value.hdr) != MMAL_SUCCESS)
+            return std::make_error_code(std::errc::invalid_argument);
+        return std::error_code();
+    }
+
+    std::error_code RPICamera::applyCameraControlGains(float analog, float digital)
+    {
+        MMAL_RATIONAL_T analogValue = { static_cast<int>(analog * 65536), 65536 };
+        if (mmal_port_parameter_set_rational(m_Camera->control, MMAL_PARAMETER_ANALOG_GAIN, analogValue) != MMAL_SUCCESS)
+            return std::make_error_code(std::errc::invalid_argument);
+
+        MMAL_RATIONAL_T digitalValue = { static_cast<int>(digital * 65536), 65536 };
+        if (mmal_port_parameter_set_rational(m_Camera->control, MMAL_PARAMETER_DIGITAL_GAIN, digitalValue) != MMAL_SUCCESS)
+            return std::make_error_code(std::errc::invalid_argument);
+        return std::error_code();
+    }
 
     std::error_code RPICamera::applyVideoFormat(ePixelFormat fmt)
     {
@@ -497,6 +693,20 @@ namespace rpiCam
     {
         RPI_LOG(DEBUG, "Camera::applyVideoSize(): applying video size ...");
 
+        if (mmal_component_disable(m_Camera.get()) != MMAL_SUCCESS)
+        {
+            RPI_LOG(WARNING, "Camera::applyVideoSize(): mmal_component_disable() failed");
+            return std::make_error_code(std::errc::io_error);
+        }
+
+        if (auto accse = applyCameraControlSize(sz, m_SnapshotSize))
+        {
+            RPI_LOG(WARNING, "Camera::applyVideoSize(): applyCameraControlSize() failed");
+            applyCameraControlSize(m_VideoSize, m_SnapshotSize);
+            mmal_component_enable(m_Camera.get());
+            return accse;
+        }
+
         m_VideoPort->format->es->video.width = VCOS_ALIGN_UP(sz(0), 32);
         m_VideoPort->format->es->video.height = VCOS_ALIGN_UP(sz(1), 16);
         m_VideoPort->format->es->video.crop.x = 0;
@@ -507,14 +717,12 @@ namespace rpiCam
         if (mmal_port_format_commit(m_VideoPort) != MMAL_SUCCESS)
         {
             RPI_LOG(WARNING, "Camera::applyVideoSize(): mmal_port_format_commit(m_VideoPort) failed");
+            applyCameraControlSize(m_VideoSize, m_SnapshotSize);
+            mmal_component_enable(m_Camera.get());
             return std::make_error_code(std::errc::io_error);
         }
 
-        if (mmal_port_format_commit(m_SnapshotPort) != MMAL_SUCCESS)
-        {
-            RPI_LOG(WARNING, "Camera::applyVideoSize(): mmal_port_format_commit(m_SnapshotPort) failed");
-            return std::make_error_code(std::errc::io_error);
-        }
+        mmal_component_enable(m_Camera.get());
 
         RPI_LOG(DEBUG, "Camera::applyVideoSize(): video size applied successfully!");
 
@@ -575,6 +783,20 @@ namespace rpiCam
     {
         RPI_LOG(DEBUG, "Camera::applySnapshotSize(): applying snapshot size ...");
 
+        if (mmal_component_disable(m_Camera.get()) != MMAL_SUCCESS)
+        {
+            RPI_LOG(WARNING, "Camera::applySnapshotSize(): mmal_component_disable() failed");
+            return std::make_error_code(std::errc::io_error);
+        }
+
+        if (auto accse = applyCameraControlSize(m_VideoSize, sz))
+        {
+            RPI_LOG(WARNING, "Camera::applySnapshotSize(): applyCameraControlSize() failed");
+            applyCameraControlSize(m_VideoSize, m_SnapshotSize);
+            mmal_component_enable(m_Camera.get());
+            return accse;
+        }
+
         m_SnapshotPort->format->es->video.width = VCOS_ALIGN_UP(sz(0), 32);
         m_SnapshotPort->format->es->video.height = VCOS_ALIGN_UP(sz(1), 16);
         m_SnapshotPort->format->es->video.crop.x = 0;
@@ -585,8 +807,12 @@ namespace rpiCam
         if (mmal_port_format_commit(m_SnapshotPort) != MMAL_SUCCESS)
         {
             RPI_LOG(WARNING, "Camera::applySnapshotSize(): mmal_port_format_commit(m_SnapshotPort) failed");
+            applyCameraControlSize(m_VideoSize, m_SnapshotSize);
+            mmal_component_enable(m_Camera.get());
             return std::make_error_code(std::errc::io_error);
         }
+
+        mmal_component_enable(m_Camera.get());
 
         RPI_LOG(DEBUG, "Camera::applySnapshotSize(): video size applied successfully!");
 
@@ -622,15 +848,31 @@ namespace rpiCam
             return std::make_error_code(std::errc::io_error);
         }
 
+        applyCameraControlSaturation();
+        applyCameraControlSharpness();
+        applyCameraControlContrast();
+        applyCameraControlBrightness();
+        applyCameraControlISO();
+        applyCameraControlVideoStabilisation();
+        applyCameraControlExposureCompensation();
+        applyCameraControlExposureMode();
+        applyCameraControlFlickerAvoidMode();
+        applyCameraControlExposureMeteringMode();
+        applyCameraControlAWBMode();
+        applyCameraControlShutterSpeed();
+        applyCameraControlDRC();
+        applyCameraControlGains();
+
         RPI_LOG(DEBUG, "Camera::initializeCameraControlPort(): camera control port successfully initialized!");
 
         return std::error_code();
     }
 
-    std::error_code RPICamera::initializeVideoPort()
+    std::error_code RPICamera::initializePreviewPort()
     {
-        RPI_LOG(DEBUG, "Camera::initializeVideoPort(): initializing video port ...");
+        RPI_LOG(DEBUG, "Camera::initializeVideoPort(): initializing preview port ...");
 
+        /*
         MMAL_PARAMETER_FPS_RANGE_T fpsRange =
         {
             {MMAL_PARAMETER_FPS_RANGE, sizeof(fpsRange)},
@@ -643,6 +885,78 @@ namespace rpiCam
             RPI_LOG(WARNING, "Camera::initializeVideoPort(): mmal_port_parameter_set(m_VideoPort) failed");
             return std::make_error_code(std::errc::io_error);
         }
+        */
+
+        switch(m_VideoFormat)
+        {
+        case kPixelFormatRGB8:
+            m_PreviewPort->format->encoding = MMAL_ENCODING_RGB24;
+            m_PreviewPort->format->encoding_variant = 0;
+            break;
+
+        case kPixelFormatYUV420:
+            m_PreviewPort->format->encoding = MMAL_ENCODING_I420;
+            m_PreviewPort->format->encoding_variant = 0;
+            break;
+
+        default:
+            {
+                RPI_LOG(WARNING, "Camera::initializePreviewPort(): unsupported video format %d", m_VideoFormat);
+                return std::make_error_code(std::errc::io_error);
+            }
+            break;
+        }
+
+        m_PreviewPort->format->es->video.width = VCOS_ALIGN_UP(m_VideoSize(0), 32);
+        m_PreviewPort->format->es->video.height = VCOS_ALIGN_UP(m_VideoSize(1), 16);
+        m_PreviewPort->format->es->video.crop.x = 0;
+        m_PreviewPort->format->es->video.crop.y = 0;
+        m_PreviewPort->format->es->video.crop.width = m_VideoSize(0);
+        m_PreviewPort->format->es->video.crop.height = m_VideoSize(1);
+        m_PreviewPort->format->es->video.frame_rate.num = 0;//m_VideoFrameRate.numerator;
+        m_PreviewPort->format->es->video.frame_rate.den = 1;//m_VideoFrameRate.denominator;
+
+        if (mmal_port_format_commit(m_PreviewPort) != MMAL_SUCCESS)
+        {
+            RPI_LOG(WARNING, "Camera::initializePreviewPort(): mmal_port_format_commit() failed");
+            return std::make_error_code(std::errc::io_error);
+        }
+
+        //m_PreviewPort->buffer_num = std::min(m_PreviewPort->buffer_num_recommended, uint32_t(VIDEO_OUTPUT_BUFFERS_NUM));
+        /*
+        if (m_VideoPort->buffer_num < VIDEO_OUTPUT_BUFFERS_NUM)
+              m_VideoPort->buffer_num = VIDEO_OUTPUT_BUFFERS_NUM;
+        */
+
+        if (mmal_port_parameter_set_boolean(m_PreviewPort, MMAL_PARAMETER_ZERO_COPY, MMAL_TRUE) != MMAL_SUCCESS)
+        {
+            RPI_LOG(WARNING, "Camera::initializePreviewPort(): mmal_port_parameter_set_boolean() failed");
+            return std::make_error_code(std::errc::io_error);
+        }
+
+        RPI_LOG(DEBUG, "Camera::initializePreviewPort(): video port successfully initialized!");
+
+        return std::error_code();
+    }
+
+    std::error_code RPICamera::initializeVideoPort()
+    {
+        RPI_LOG(DEBUG, "Camera::initializeVideoPort(): initializing video port ...");
+
+        /*
+        MMAL_PARAMETER_FPS_RANGE_T fpsRange =
+        {
+            {MMAL_PARAMETER_FPS_RANGE, sizeof(fpsRange)},
+            {m_VideoFrameRate.numerator, m_VideoFrameRate.denominator},
+            {m_VideoFrameRate.numerator, m_VideoFrameRate.denominator}
+        };
+
+        if (mmal_port_parameter_set(m_VideoPort, &fpsRange.hdr) != MMAL_SUCCESS)
+        {
+            RPI_LOG(WARNING, "Camera::initializeVideoPort(): mmal_port_parameter_set(m_VideoPort) failed");
+            return std::make_error_code(std::errc::io_error);
+        }
+        */
 
         switch(m_VideoFormat)
         {
@@ -679,8 +993,10 @@ namespace rpiCam
             return std::make_error_code(std::errc::io_error);
         }
 
-        if (m_VideoPort->buffer_num < VIDEO_OUTPUT_BUFFERS_NUM)
-              m_VideoPort->buffer_num = VIDEO_OUTPUT_BUFFERS_NUM;
+
+        //m_VideoPort->buffer_num = std::min(m_VideoPort->buffer_num_recommended, uint32_t(VIDEO_OUTPUT_BUFFERS_NUM));
+        //if (m_VideoPort->buffer_num < VIDEO_OUTPUT_BUFFERS_NUM)
+        //      m_VideoPort->buffer_num = VIDEO_OUTPUT_BUFFERS_NUM;
 
         if (mmal_port_parameter_set_boolean(m_VideoPort, MMAL_PARAMETER_ZERO_COPY, MMAL_TRUE) != MMAL_SUCCESS)
         {
@@ -731,6 +1047,7 @@ namespace rpiCam
             RPI_LOG(WARNING, "Camera::initializeSnapshotPort(): mmal_port_format_commit() failed");
             return std::make_error_code(std::errc::io_error);
         }
+
 
         //if (m_SnapshotPort->buffer_num < VIDEO_OUTPUT_BUFFERS_NUM)
         //      m_SnapshotPort->buffer_num = VIDEO_OUTPUT_BUFFERS_NUM;

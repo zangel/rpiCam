@@ -2,6 +2,10 @@
 #include "rpiCam/Logging.hpp"
 #include <iostream>
 #include <fstream>
+#include <condition_variable>
+#include <mutex>
+
+#define CLAMP_0_255(X) ((X) > 255 ? 255 : ((X) < 0 ? 0 : (X)))
 
 using namespace rpiCam;
 
@@ -39,25 +43,120 @@ public:
     {
         //std::cout << "onCameraVideoFrame():" << std::endl;
         //dumpBufferInfo(buffer);
-        //saveBuffer(buffer, "video.ppm");
+        saveBuffer(buffer, "video.ppm");
+    }
+
+    void convertYuv420ToRgb(std::shared_ptr<PixelSampleBuffer> const &buffer, uint8_t* destRgb)
+    {
+        int width = buffer->planeSize()[0];
+        int height = buffer->planeSize()[1];
+        int halfWidth = width/2;
+        int halfHeight = height/2;
+
+        uint8_t const *srcY = reinterpret_cast<uint8_t const*>(buffer->planeData(0));
+        uint8_t const *srcU = reinterpret_cast<uint8_t const*>(buffer->planeData(1));
+        uint8_t const *srcV = reinterpret_cast<uint8_t const*>(buffer->planeData(2));
+
+        //int offsetU = width*height;
+        //int offsetV = offsetU + halfWidth*halfHeight;
+
+
+        for (int y = 0; y < halfHeight; y++)
+        {
+            for (int x = 0; x < halfWidth; x++)
+            {
+                int offset = (y * halfWidth) + x;
+                int U = srcU[offset] - 128;
+                int V = srcV[offset] - 128;
+
+                int a1 = 1634 * V;
+                int a2 = 832 * V;
+                int a3 = 400 * U;
+                int a4 = 2066 * U;
+
+                offset = ((y*2 + 0) * width + x*2);
+                int offsetRGB = offset*3;
+
+                // Y1
+                int Y = srcY[offset];
+                int a0 = 1192 * (Y - 16);
+                int r = (a0 + a1) >> 10; // R
+                int g = (a0 - a2 - a3) >> 10; // G
+                int b = (a0 + a4) >> 10; // B
+                destRgb[offsetRGB    ] = (uint8_t)CLAMP_0_255(r);
+                destRgb[offsetRGB + 1] = (uint8_t)CLAMP_0_255(g);
+                destRgb[offsetRGB + 2] = (uint8_t)CLAMP_0_255(b);
+
+                // Y2
+                Y = srcY[offset + 1];
+                a0 = 1192 * (Y - 16);
+                r = (a0 + a1) >> 10; // R
+                g = (a0 - a2 - a3) >> 10; // G
+                b = (a0 + a4) >> 10; // B
+                destRgb[offsetRGB + 3] = (uint8_t)CLAMP_0_255(r);
+                destRgb[offsetRGB + 4] = (uint8_t)CLAMP_0_255(g);
+                destRgb[offsetRGB + 5] = (uint8_t)CLAMP_0_255(b);
+
+                offset = ((y*2 + 1) * width + x*2);
+                offsetRGB = offset + offset + offset;
+
+                // Y3
+                Y = srcY[offset];
+                a0 = 1192 * (Y - 16);
+                r = (a0 + a1) >> 10; // R
+                g = (a0 - a2 - a3) >> 10; // G
+                b = (a0 + a4) >> 10; // B
+                destRgb[offsetRGB    ] = (uint8_t)CLAMP_0_255(r);
+                destRgb[offsetRGB + 1] = (uint8_t)CLAMP_0_255(g);
+                destRgb[offsetRGB + 2] = (uint8_t)CLAMP_0_255(b);
+
+                // Y4
+                Y = srcY[offset + 1];
+                a0 = 1192 * (Y - 16);
+                r = (a0 + a1) >> 10; // R
+                g = (a0 - a2 - a3) >> 10; // G
+                b = (a0 + a4) >> 10; // B
+                destRgb[offsetRGB + 3] = (uint8_t)CLAMP_0_255(r);
+                destRgb[offsetRGB + 4] = (uint8_t)CLAMP_0_255(g);
+                destRgb[offsetRGB + 5] = (uint8_t)CLAMP_0_255(b);
+            }
+        }
     }
 
     void saveBuffer(std::shared_ptr<PixelSampleBuffer> const &buffer, std::string name)
     {
         if(!buffer->lock())
         {
+            char *data;
+            std::size_t rowBytes;
+
+            if(buffer->format() == kPixelFormatYUV420)
+            {
+                data = reinterpret_cast<char *>(std::malloc(buffer->planeSize()[0] * buffer->planeSize()[1] * 3));
+                rowBytes = buffer->planeSize()[0] * 3;
+
+                convertYuv420ToRgb(buffer, reinterpret_cast<uint8_t*>(data));
+            }
+            else
+            {
+                data = reinterpret_cast<char*>(buffer->planeData());
+                rowBytes = buffer->planeRowBytes();
+            }
             std::ofstream ppm(name, std::ios::binary);
             ppm << "P6" << std::endl;
             ppm << buffer->planeSize()[0] << " " << buffer->planeSize()[1] << std::endl;
             ppm << "255" << std::endl;
 
-            char *data = reinterpret_cast<char*>(buffer->planeData());
-            std::size_t rowBytes = buffer->planeRowBytes();
-
+            char *tmp = data;
             for (int y = 0; y < buffer->planeSize()[1]; ++y)
             {
-                ppm.write(data, 3 * buffer->planeSize()[0]);
-                data += rowBytes;
+                ppm.write(tmp, 3 * buffer->planeSize()[0]);
+                tmp += rowBytes;
+            }
+
+            if(buffer->format() == kPixelFormatYUV420)
+            {
+                std::free(data);
             }
             buffer->unlock();
         }
@@ -66,8 +165,10 @@ public:
     void onCameraSnapshotTaken(std::shared_ptr<PixelSampleBuffer> const &buffer) override
     {
         std::cout << "onCameraSnapshotTaken():" << std::endl;
-        //dumpBufferInfo(buffer);
-        //saveBuffer(buffer, "snapshot.ppm");
+        dumpBufferInfo(buffer);
+        saveBuffer(buffer, "snapshot.ppm");
+        std::unique_lock<std::mutex> lk(mutex);
+        cv.notify_one();
     }
 
     void dumpBufferInfo(std::shared_ptr<PixelSampleBuffer> const &buffer)
@@ -92,11 +193,20 @@ public:
             std::cout.flush();
         }
     }
+
+    void waitForSnapshot()
+    {
+        std::unique_lock<std::mutex> lk(mutex);
+        cv.wait(lk);
+    }
+
+    std::mutex mutex;
+    std::condition_variable cv;
 };
 
 int main(int argc, char *argv[])
 {
-    setLogLevel(LOG_SILENT);
+    setLogLevel(LOG_DEBUG);
     CameraEvents cameraEvents;
 
     auto cameras = Device::list<Camera>();
@@ -108,15 +218,21 @@ int main(int argc, char *argv[])
 
         if(!cam->open())
         {
-            cam->setVideoSize(Vec2ui(1920, 1080));
-            cam->setSnapshotSize(Vec2ui(2592, 1944));
-            cam->setVideoFrameRate(Rational(30, 1));
+            cam->setVideoSize(Vec2ui(2592, 1944));
+            cam->setVideoFrameRate(Rational(10, 1));
             if(!cam->startVideo())
+            {
+                std::this_thread::sleep_for(std::chrono::seconds(4));
+                cam->stopVideo();
+            }
+
+            cam->setSnapshotSize(Vec2ui(2592, 1944));
+            if(!cam->startTakingSnapshots())
             {
                 std::this_thread::sleep_for(std::chrono::seconds(1));
                 cam->takeSnapshot();
-                std::this_thread::sleep_for(std::chrono::seconds(5));
-                cam->stopVideo();
+                cameraEvents.waitForSnapshot();
+                cam->stopTakingSnapshots();
             }
             cam->close();
         }

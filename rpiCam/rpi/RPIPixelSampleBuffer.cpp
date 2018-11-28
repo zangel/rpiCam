@@ -130,20 +130,25 @@ namespace rpiCam
             {
                 m_PlaneCount = 1;
                 m_PlaneSizeShift[0] = Vec2ui(0,0);
-                m_PlaneDataOffset[0] = 0;
-                m_PlaneRowBytes[0] = m_Size(0) * 3;
+                m_PlaneDataOffset[0] = m_Buffer->type->video.offset[0];
+                m_PlaneRowBytes[0] = m_Buffer->type->video.pitch[0];
             }
             break;
 
         case kPixelFormatYUV420:
             {
-                m_PlaneCount = 2;
+                m_PlaneCount = 3;
                 m_PlaneSizeShift[0] = Vec2ui(0,0);
                 m_PlaneSizeShift[1] = Vec2ui(1,1);
-                m_PlaneDataOffset[0] = 0;
-                m_PlaneDataOffset[1] = m_Size(1) * m_Size(0);
-                m_PlaneRowBytes[0] = m_Size(0);
-                m_PlaneRowBytes[1] = m_Size(0);
+                m_PlaneSizeShift[2] = Vec2ui(1,1);
+
+                m_PlaneDataOffset[0] = m_Buffer->type->video.offset[0];
+                m_PlaneDataOffset[1] = m_Buffer->type->video.offset[1];
+                m_PlaneDataOffset[2] = m_Buffer->type->video.offset[2];
+
+                m_PlaneRowBytes[0] = m_Buffer->type->video.pitch[0];
+                m_PlaneRowBytes[1] = m_Buffer->type->video.pitch[1];
+                m_PlaneRowBytes[2] = m_Buffer->type->video.pitch[2];
             }
             break;
 

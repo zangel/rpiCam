@@ -39,8 +39,8 @@ namespace rpiCam
         ePixelFormat m_Format;
         std::atomic<uint32_t> m_LockCounter;
         std::size_t m_PlaneCount;
-        Vec2ui m_PlaneSizeShift[2];
-        std::size_t m_PlaneDataOffset[2];
-        std::size_t m_PlaneRowBytes[2];
+        Vec2ui m_PlaneSizeShift[4];
+        std::size_t m_PlaneDataOffset[4];
+        std::size_t m_PlaneRowBytes[4];
     };
 }

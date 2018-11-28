@@ -52,9 +52,29 @@ namespace rpiCam
         Vec2ui getSnapshotSize() const override;
         std::error_code setSnapshotSize(Vec2ui const &sz) override;
 
+        std::error_code startTakingSnapshots() override;
+        bool isTakingSnapshotsStarted() const override;
+        std::error_code stopTakingSnapshots() override;
+
         std::error_code takeSnapshot() override;
 
     private:
+        std::error_code applyCameraControlSize(Vec2ui const &vsz, Vec2ui const &ssz);
+        std::error_code applyCameraControlSaturation(float saturation = 0.0f);
+        std::error_code applyCameraControlSharpness(float sharpness = 0.0f);
+        std::error_code applyCameraControlContrast(float contrast = 0.0f);
+        std::error_code applyCameraControlBrightness(float brightness = 0.5f);
+        std::error_code applyCameraControlISO(int ISO = 0);
+        std::error_code applyCameraControlVideoStabilisation(bool videoStabilisation = false);
+        std::error_code applyCameraControlExposureCompensation(int exposureCompensation = 0);
+        std::error_code applyCameraControlExposureMode(MMAL_PARAM_EXPOSUREMODE_T exposureMode = MMAL_PARAM_EXPOSUREMODE_AUTO);
+        std::error_code applyCameraControlFlickerAvoidMode(MMAL_PARAM_FLICKERAVOID_T flickerAvoidMode = MMAL_PARAM_FLICKERAVOID_OFF);
+        std::error_code applyCameraControlExposureMeteringMode(MMAL_PARAM_EXPOSUREMETERINGMODE_T exposureMeteringMode = MMAL_PARAM_EXPOSUREMETERINGMODE_AVERAGE);
+        std::error_code applyCameraControlAWBMode(MMAL_PARAM_AWBMODE_T awbMode = MMAL_PARAM_AWBMODE_AUTO);
+        std::error_code applyCameraControlShutterSpeed(int shutterSpeed = 0);
+        std::error_code applyCameraControlDRC(MMAL_PARAMETER_DRC_STRENGTH_T drc = MMAL_PARAMETER_DRC_STRENGTH_OFF);
+        std::error_code applyCameraControlGains(float analog = 0.0f, float digital = 0.0f);
+
         std::error_code applyVideoFormat(ePixelFormat fmt);
         std::error_code applyVideoSize(Vec2ui const &sz);
         std::error_code applyVideoFrameRate(Rational const &rate);
@@ -63,6 +83,7 @@ namespace rpiCam
         std::error_code applySnapshotSize(Vec2ui const &sz);
 
         std::error_code initializeCameraControlPort();
+        std::error_code initializePreviewPort();
         std::error_code initializeVideoPort();
         std::error_code initializeSnapshotPort();
 
@@ -83,6 +104,7 @@ namespace rpiCam
 
     private:
         std::shared_ptr<MMAL_COMPONENT_T> m_Camera;
+        MMAL_PORT_T *m_PreviewPort;
         MMAL_PORT_T *m_VideoPort;
         MMAL_PORT_T *m_SnapshotPort;
         std::string m_Name;

@@ -74,6 +74,7 @@ int main(int argc, char *argv[])
         {
             std::cout << "camera: " << cam->name() << std::endl;
             cam->setVideoFrameRate(Rational(200, 1));
+            cam->setVideoFormat(kPixelFormatYUV420);
             for(auto vs : videoSizes)
             {
                 std::cout << "	estVideoFrameRate(" << vs(0) << "x" << vs(1) <<"): ";
