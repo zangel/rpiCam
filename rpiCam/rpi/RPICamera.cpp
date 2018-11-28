@@ -60,12 +60,12 @@ namespace rpiCam
         , m_VideoFrameRateMin()
         , m_VideoFrameRateMax()
         , m_VideoFormat(kPixelFormatYUV420)
-        , m_VideoSize(2592, 1944)
+        , m_VideoSize(1920, 1080)
         , m_VideoFrameRate(60, 1)
         , m_SupportedSnapshotFormats()
         , m_SupportedSnapshotSizes()
         , m_SnapshotFormat(kPixelFormatYUV420)
-        , m_SnapshotSize(2592, 1944)
+        , m_SnapshotSize(1920, 1080)
         , m_bConfiguring(false)
         , m_bConfigurationChanged(false)
         , m_bTakingSnapshot(false)
@@ -693,7 +693,6 @@ namespace rpiCam
     {
         RPI_LOG(DEBUG, "Camera::applyVideoSize(): applying video size ...");
 
-        /*
         if (mmal_component_disable(m_Camera.get()) != MMAL_SUCCESS)
         {
             RPI_LOG(WARNING, "Camera::applyVideoSize(): mmal_component_disable() failed");
@@ -707,7 +706,6 @@ namespace rpiCam
             mmal_component_enable(m_Camera.get());
             return accse;
         }
-        */
 
         m_VideoPort->format->es->video.width = VCOS_ALIGN_UP(sz(0), 32);
         m_VideoPort->format->es->video.height = VCOS_ALIGN_UP(sz(1), 16);
@@ -719,12 +717,12 @@ namespace rpiCam
         if (mmal_port_format_commit(m_VideoPort) != MMAL_SUCCESS)
         {
             RPI_LOG(WARNING, "Camera::applyVideoSize(): mmal_port_format_commit(m_VideoPort) failed");
-            //applyCameraControlSize(m_VideoSize, m_SnapshotSize);
-            //mmal_component_enable(m_Camera.get());
+            applyCameraControlSize(m_VideoSize, m_SnapshotSize);
+            mmal_component_enable(m_Camera.get());
             return std::make_error_code(std::errc::io_error);
         }
 
-        //mmal_component_enable(m_Camera.get());
+        mmal_component_enable(m_Camera.get());
 
         RPI_LOG(DEBUG, "Camera::applyVideoSize(): video size applied successfully!");
 
@@ -785,7 +783,6 @@ namespace rpiCam
     {
         RPI_LOG(DEBUG, "Camera::applySnapshotSize(): applying snapshot size ...");
 
-        /*
         if (mmal_component_disable(m_Camera.get()) != MMAL_SUCCESS)
         {
             RPI_LOG(WARNING, "Camera::applySnapshotSize(): mmal_component_disable() failed");
@@ -799,7 +796,6 @@ namespace rpiCam
             mmal_component_enable(m_Camera.get());
             return accse;
         }
-        */
 
         m_SnapshotPort->format->es->video.width = VCOS_ALIGN_UP(sz(0), 32);
         m_SnapshotPort->format->es->video.height = VCOS_ALIGN_UP(sz(1), 16);
@@ -811,12 +807,12 @@ namespace rpiCam
         if (mmal_port_format_commit(m_SnapshotPort) != MMAL_SUCCESS)
         {
             RPI_LOG(WARNING, "Camera::applySnapshotSize(): mmal_port_format_commit(m_SnapshotPort) failed");
-            //applyCameraControlSize(m_VideoSize, m_SnapshotSize);
-            //mmal_component_enable(m_Camera.get());
+            applyCameraControlSize(m_VideoSize, m_SnapshotSize);
+            mmal_component_enable(m_Camera.get());
             return std::make_error_code(std::errc::io_error);
         }
 
-        //mmal_component_enable(m_Camera.get());
+        mmal_component_enable(m_Camera.get());
 
         RPI_LOG(DEBUG, "Camera::applySnapshotSize(): video size applied successfully!");
 

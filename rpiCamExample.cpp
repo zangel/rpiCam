@@ -57,16 +57,18 @@ public:
         uint8_t const *srcU = reinterpret_cast<uint8_t const*>(buffer->planeData(1));
         uint8_t const *srcV = reinterpret_cast<uint8_t const*>(buffer->planeData(2));
 
-        //int offsetU = width*height;
-        //int offsetV = offsetU + halfWidth*halfHeight;
+        int yStride = buffer->planeRowBytes(0);
+        int uStride = buffer->planeRowBytes(1);
+        int vStride = buffer->planeRowBytes(2);
 
 
         for (int y = 0; y < halfHeight; y++)
         {
             for (int x = 0; x < halfWidth; x++)
             {
-                int offset = (y * halfWidth) + x;
+                int offset = (y * uStride) + x;
                 int U = srcU[offset] - 128;
+                offset = (y * vStride) + x;
                 int V = srcV[offset] - 128;
 
                 int a1 = 1634 * V;
@@ -74,8 +76,8 @@ public:
                 int a3 = 400 * U;
                 int a4 = 2066 * U;
 
-                offset = ((y*2 + 0) * width + x*2);
-                int offsetRGB = offset*3;
+                offset = ((y*2 + 0) * yStride + x*2);
+                int offsetRGB = 3 * ((y*2 + 0) * width + x*2);
 
                 // Y1
                 int Y = srcY[offset];
@@ -97,8 +99,8 @@ public:
                 destRgb[offsetRGB + 4] = (uint8_t)CLAMP_0_255(g);
                 destRgb[offsetRGB + 5] = (uint8_t)CLAMP_0_255(b);
 
-                offset = ((y*2 + 1) * width + x*2);
-                offsetRGB = offset + offset + offset;
+                offset = ((y*2 + 1) * yStride + x*2);
+                offsetRGB = 3 * ((y*2 + 1) * width + x*2);
 
                 // Y3
                 Y = srcY[offset];
@@ -225,8 +227,10 @@ int main(int argc, char *argv[])
                 std::this_thread::sleep_for(std::chrono::seconds(4));
                 cam->stopVideo();
             }
+            // set low resolution so snapshot port pool allocation succeeds
+            cam->setVideoSize(Vec2ui(640, 480));
 
-            cam->setSnapshotSize(Vec2ui(2592, 1944));
+            cam->setSnapshotSize(Vec2ui(3280, 2464));
             if(!cam->startTakingSnapshots())
             {
                 std::this_thread::sleep_for(std::chrono::seconds(1));
