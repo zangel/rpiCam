@@ -14,7 +14,12 @@
 
 namespace rpiCam
 {
-    typedef Eigen::Matrix<std::int32_t, 2, 1> Vec2i;
-    typedef Eigen::Matrix<std::uint32_t, 2, 1> Vec2ui;
+    using TimeClock = std::chrono::steady_clock;
+    using TimePoint = TimeClock::time_point;
+    using Duration = TimeClock::duration;
+
+
+    using Vec2i = Eigen::Matrix<std::int32_t, 2, 1>;
+    using Vec2ui = Eigen::Matrix<std::uint32_t, 2, 1>;
 }
 

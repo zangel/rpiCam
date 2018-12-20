@@ -58,23 +58,69 @@ namespace rpiCam
 
         std::error_code takeSnapshot() override;
 
+        float getBrightness() const override;
+        std::error_code setBrightness(float brightness) override;
+
+        float getContrast() const override;
+        std::error_code setContrast(float contrast) override;
+
+        float getSharpness() const override;
+        std::error_code setSharpness(float sharpness) override;
+
+        float getSaturation() const override;
+        std::error_code setSaturation(float saturation) override;
+
+        int getISO() const override;
+        std::error_code setISO(int ISO) override;
+
+        Duration getShutterSpeed() const override;
+        std::error_code setShutterSpeed(Duration shutterSpeed) override;
+
+        AWBMode getAWBMode() const override;
+        std::error_code setAWBMode(AWBMode awbMode) override;
+
+        int getExposureCompensation() const override;
+        std::error_code setExposureCompensation(int exposureCompensation) override;
+
+        ExposureMode getExposureMode() const override;
+        std::error_code setExposureMode(ExposureMode exposureMode) override;
+
+        ExposureMeteringMode getExposureMeteringMode() const override;
+        std::error_code setExposureMeteringMode(ExposureMeteringMode exposureMeteringMode) override;
+
+        float getAnalogGain() const override;
+        std::error_code setAnalogGain(float gain) override;
+
+        float getDigitalGain() const override;
+        std::error_code setDigitalGain(float gain) override;
+
+        DRCStrength getDRCStrength() const override;
+        std::error_code setDRCStrength(DRCStrength strength) override;
+
+        bool  getVideoStabilisation() const override;
+        std::error_code setVideoStabilisation(bool videoStabilisation) override;
+
+        FlickerAvoid getFlickerAvoid() const override;
+        std::error_code setFlickerAvoid(FlickerAvoid flickerAvoid) override;
+
     private:
         std::error_code applyCameraControlSize(Vec2ui const &vsz, Vec2ui const &ssz);
-        std::error_code applyCameraControlSaturation(float saturation = 0.0f);
-        std::error_code applyCameraControlSharpness(float sharpness = 0.0f);
-        std::error_code applyCameraControlContrast(float contrast = 0.0f);
-        std::error_code applyCameraControlBrightness(float brightness = 0.5f);
-        std::error_code applyCameraControlISO(int ISO = 0);
-        std::error_code applyCameraControlVideoStabilisation(bool videoStabilisation = false);
-        std::error_code applyCameraControlExposureCompensation(int exposureCompensation = 0);
-        std::error_code applyCameraControlExposureMode(MMAL_PARAM_EXPOSUREMODE_T exposureMode = MMAL_PARAM_EXPOSUREMODE_AUTO);
-        std::error_code applyCameraControlFlickerAvoidMode(MMAL_PARAM_FLICKERAVOID_T flickerAvoidMode = MMAL_PARAM_FLICKERAVOID_OFF);
-        std::error_code applyCameraControlExposureMeteringMode(MMAL_PARAM_EXPOSUREMETERINGMODE_T exposureMeteringMode = MMAL_PARAM_EXPOSUREMETERINGMODE_AVERAGE);
-        std::error_code applyCameraControlAWBMode(MMAL_PARAM_AWBMODE_T awbMode = MMAL_PARAM_AWBMODE_AUTO);
-        std::error_code applyCameraControlShutterSpeed(int shutterSpeed = 0);
-        std::error_code applyCameraControlDRC(MMAL_PARAMETER_DRC_STRENGTH_T drc = MMAL_PARAMETER_DRC_STRENGTH_OFF);
-        std::error_code applyCameraControlGains(float analog = 0.0f, float digital = 0.0f);
-
+        std::error_code applyCameraControlBrightness(float brightness);
+        std::error_code applyCameraControlContrast(float contrast);
+        std::error_code applyCameraControlSharpness(float sharpness);
+        std::error_code applyCameraControlSaturation(float saturation);
+        std::error_code applyCameraControlISO(int ISO);
+        std::error_code applyCameraControlShutterSpeed(Duration shutterSpeed);
+        std::error_code applyCameraControlAWBMode(AWBMode awbMode);
+        std::error_code applyCameraControlExposureCompensation(int exposureCompensation);
+        std::error_code applyCameraControlExposureMode(ExposureMode exposureMode);
+        std::error_code applyCameraControlExposureMeteringMode(ExposureMeteringMode exposureMeteringMode);
+        std::error_code applyCameraControlAnalogGain(float gain);
+        std::error_code applyCameraControlDigitalGain(float gain);
+        std::error_code applyCameraControlDRCStrength(DRCStrength drc);
+        std::error_code applyCameraControlVideoStabilisation(bool videoStabilisation);
+        std::error_code applyCameraControlFlickerAvoid(FlickerAvoid flickerAvoid);
+        
         std::error_code applyVideoFormat(ePixelFormat fmt);
         std::error_code applyVideoSize(Vec2ui const &sz);
         std::error_code applyVideoFrameRate(Rational const &rate);
@@ -119,6 +165,22 @@ namespace rpiCam
         std::list<Vec2ui> m_SupportedSnapshotSizes;
         ePixelFormat m_SnapshotFormat;
         Vec2ui m_SnapshotSize;
+        float m_Brightness;
+        float m_Contrast;
+        float m_Sharpness;
+        float m_Saturation;
+        int m_ISO;
+        Duration m_ShutterSpeed;
+        AWBMode m_AWBMode;
+        int m_ExposureCompensation;
+        ExposureMode m_ExposureMode;
+        ExposureMeteringMode m_ExposureMeteringMode;
+        float m_AnalogGain;
+        float m_DigitalGain;
+        DRCStrength m_DRCStrength;
+        bool m_VideoStabilisation;
+        FlickerAvoid m_FlickerAvoid;
+                
         bool m_bConfiguring;
         bool m_bConfigurationChanged;
         bool m_bTakingSnapshot;

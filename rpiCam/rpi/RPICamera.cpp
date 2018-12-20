@@ -66,6 +66,21 @@ namespace rpiCam
         , m_SupportedSnapshotSizes()
         , m_SnapshotFormat(kPixelFormatYUV420)
         , m_SnapshotSize(1920, 1080)
+        , m_Brightness(0.5f)
+        , m_Contrast(0.0f)
+        , m_Sharpness(0.0f)
+        , m_Saturation(0.0f)
+        , m_ISO(0)
+        , m_ShutterSpeed(std::chrono::seconds(0))
+        , m_AWBMode(AWBMode::Auto)
+        , m_ExposureCompensation(0)
+        , m_ExposureMode(ExposureMode::Auto)
+        , m_ExposureMeteringMode(ExposureMeteringMode::Average)
+        , m_AnalogGain(0.0f)
+        , m_DigitalGain(0.0f)
+        , m_DRCStrength(DRCStrength::Off)
+        , m_VideoStabilisation(false)
+        , m_FlickerAvoid(FlickerAvoid::Off)
         , m_bConfiguring(false)
         , m_bConfigurationChanged(false)
         , m_bTakingSnapshot(false)
@@ -387,7 +402,7 @@ namespace rpiCam
         if (!isOpen())
             return std::make_error_code(std::errc::not_connected);
 
-        if (isVideoStarted())
+        if (isTakingSnapshotsStarted())
             return std::make_error_code(std::errc::not_supported);
 
         if (std::error_code asfe = applySnapshotFormat(fmt))
@@ -412,7 +427,7 @@ namespace rpiCam
         if (!isOpen())
             return std::make_error_code(std::errc::not_connected);
 
-        if (isVideoStarted())
+        if (isTakingSnapshotsStarted())
             return std::make_error_code(std::errc::not_supported);
 
         if (std::error_code asse = applySnapshotSize(sz))
@@ -515,6 +530,329 @@ namespace rpiCam
 
         return std::error_code();
     }
+    
+    float RPICamera::getBrightness() const
+    {
+        return m_Brightness;
+    }
+
+    std::error_code RPICamera::setBrightness(float brightness)
+    {
+        if (!isOpen())
+            return std::make_error_code(std::errc::not_connected);
+            
+        if (std::error_code accbe = applyCameraControlBrightness(brightness))
+        {
+            applyCameraControlBrightness(m_Brightness);
+            return accbe;
+        }
+        
+        m_Brightness = brightness;
+        m_bConfigurationChanged = true;
+        return std::error_code();
+    }
+
+    float RPICamera::getContrast() const
+    {
+        return m_Contrast;
+    }
+
+    std::error_code RPICamera::setContrast(float contrast)
+    {
+        if (!isOpen())
+            return std::make_error_code(std::errc::not_connected);
+            
+        if (std::error_code accce = applyCameraControlContrast(contrast))
+        {
+            applyCameraControlContrast(m_Contrast);
+            return accce;
+        }
+        
+        m_Contrast = contrast;
+        m_bConfigurationChanged = true;
+        return std::error_code();
+    }
+
+
+    float RPICamera::getSharpness() const
+    {
+        return m_Sharpness;
+    }
+
+    std::error_code RPICamera::setSharpness(float sharpness)
+    {
+        if (!isOpen())
+            return std::make_error_code(std::errc::not_connected);
+            
+        if (std::error_code accse = applyCameraControlSharpness(sharpness))
+        {
+            applyCameraControlSharpness(m_Sharpness);
+            return accse;
+        }
+        
+        m_Sharpness = sharpness;
+        m_bConfigurationChanged = true;
+        return std::error_code();
+    }
+
+    float RPICamera::getSaturation() const
+    {
+        return m_Saturation;
+    }
+
+    std::error_code RPICamera::setSaturation(float saturation)
+    {
+        if (!isOpen())
+            return std::make_error_code(std::errc::not_connected);
+            
+        if (std::error_code accse = applyCameraControlSaturation(saturation))
+        {
+            applyCameraControlSaturation(m_Saturation);
+            return accse;
+        }
+        
+        m_Saturation = saturation;
+        m_bConfigurationChanged = true;
+        return std::error_code();
+    }
+
+
+    int RPICamera::getISO() const
+    {
+        return m_ISO;
+    }
+
+    std::error_code RPICamera::setISO(int ISO)
+    {
+        if (!isOpen())
+            return std::make_error_code(std::errc::not_connected);
+            
+        if (std::error_code accie = applyCameraControlISO(ISO))
+        {
+            applyCameraControlISO(m_ISO);
+            return accie;
+        }
+        
+        m_ISO = ISO;
+        m_bConfigurationChanged = true;
+        return std::error_code();
+    }
+
+    Duration RPICamera::getShutterSpeed() const
+    {
+        return m_ShutterSpeed;
+    }
+
+    std::error_code RPICamera::setShutterSpeed(Duration shutterSpeed)
+    {
+        if (!isOpen())
+            return std::make_error_code(std::errc::not_connected);
+            
+        if (std::error_code accsse = applyCameraControlShutterSpeed(shutterSpeed))
+        {
+            applyCameraControlShutterSpeed(m_ShutterSpeed);
+            return accsse;
+        }
+        
+        m_ShutterSpeed = shutterSpeed;
+        m_bConfigurationChanged = true;
+        return std::error_code();
+    }
+
+    Camera::AWBMode RPICamera::getAWBMode() const
+    {
+        return m_AWBMode;
+    }
+
+    std::error_code RPICamera::setAWBMode(AWBMode awbMode)
+    {
+        if (!isOpen())
+            return std::make_error_code(std::errc::not_connected);
+            
+        if (std::error_code accae = applyCameraControlAWBMode(awbMode))
+        {
+            applyCameraControlAWBMode(m_AWBMode);
+            return accae;
+        }
+        
+        m_AWBMode = awbMode;
+        m_bConfigurationChanged = true;
+        return std::error_code();
+    }
+
+
+    int RPICamera::getExposureCompensation() const
+    {
+        return m_ExposureCompensation;
+    }
+
+    std::error_code RPICamera::setExposureCompensation(int exposureCompensation)
+    {
+        if (!isOpen())
+            return std::make_error_code(std::errc::not_connected);
+            
+        if (std::error_code accece = applyCameraControlExposureCompensation(exposureCompensation))
+        {
+            applyCameraControlExposureCompensation(m_ExposureCompensation);
+            return accece;
+        }
+        
+        m_ExposureCompensation = exposureCompensation;
+        m_bConfigurationChanged = true;
+        return std::error_code();
+    }
+
+
+    Camera::ExposureMode RPICamera::getExposureMode() const
+    {
+        return m_ExposureMode;
+    }
+
+    std::error_code RPICamera::setExposureMode(ExposureMode exposureMode)
+    {
+        if (!isOpen())
+            return std::make_error_code(std::errc::not_connected);
+            
+        if (std::error_code acceme = applyCameraControlExposureMode(exposureMode))
+        {
+            applyCameraControlExposureMode(m_ExposureMode);
+            return acceme;
+        }
+        
+        m_ExposureMode = exposureMode;
+        m_bConfigurationChanged = true;
+        return std::error_code();
+    }
+
+
+    Camera::ExposureMeteringMode RPICamera::getExposureMeteringMode() const
+    {
+        return m_ExposureMeteringMode;
+    }
+
+    std::error_code RPICamera::setExposureMeteringMode(ExposureMeteringMode exposureMeteringMode)
+    {
+        if (!isOpen())
+            return std::make_error_code(std::errc::not_connected);
+            
+        if (std::error_code accemme = applyCameraControlExposureMeteringMode(exposureMeteringMode))
+        {
+            applyCameraControlExposureMeteringMode(m_ExposureMeteringMode);
+            return accemme;
+        }
+        
+        m_ExposureMeteringMode = exposureMeteringMode;
+        m_bConfigurationChanged = true;
+        return std::error_code();
+    }
+
+    float RPICamera::getAnalogGain() const
+    {
+        return m_AnalogGain;
+    }
+
+    std::error_code RPICamera::setAnalogGain(float gain)
+    {
+        if (!isOpen())
+            return std::make_error_code(std::errc::not_connected);
+            
+        if (std::error_code accage = applyCameraControlAnalogGain(gain))
+        {
+            applyCameraControlAnalogGain(m_AnalogGain);
+            return accage;
+        }
+        
+        m_AnalogGain = gain;
+        m_bConfigurationChanged = true;
+        return std::error_code();
+    }
+
+
+    float RPICamera::getDigitalGain() const
+    {
+        return m_DigitalGain;
+    }
+
+    std::error_code RPICamera::setDigitalGain(float gain)
+    {
+        if (!isOpen())
+            return std::make_error_code(std::errc::not_connected);
+            
+        if (std::error_code accdge = applyCameraControlDigitalGain(gain))
+        {
+            applyCameraControlDigitalGain(m_DigitalGain);
+            return accdge;
+        }
+        
+        m_DigitalGain = gain;
+        m_bConfigurationChanged = true;
+        return std::error_code();
+    }
+
+
+    Camera::DRCStrength RPICamera::getDRCStrength() const
+    {
+        return m_DRCStrength;
+    }
+
+    std::error_code RPICamera::setDRCStrength(DRCStrength strength)
+    {
+        if (!isOpen())
+            return std::make_error_code(std::errc::not_connected);
+            
+        if (std::error_code accdse = applyCameraControlDRCStrength(strength))
+        {
+            applyCameraControlDRCStrength(m_DRCStrength);
+            return accdse;
+        }
+        
+        m_DRCStrength = strength;
+        m_bConfigurationChanged = true;
+        return std::error_code();
+    }
+
+    bool RPICamera::getVideoStabilisation() const
+    {
+        return m_VideoStabilisation;
+    }
+
+    std::error_code RPICamera::setVideoStabilisation(bool videoStabilisation)
+    {
+        if (!isOpen())
+            return std::make_error_code(std::errc::not_connected);
+            
+        if (std::error_code accvse = applyCameraControlVideoStabilisation(videoStabilisation))
+        {
+            applyCameraControlVideoStabilisation(m_VideoStabilisation);
+            return accvse;
+        }
+        
+        m_VideoStabilisation = videoStabilisation;
+        m_bConfigurationChanged = true;
+        return std::error_code();
+    }
+
+
+    Camera::FlickerAvoid RPICamera::getFlickerAvoid() const
+    {
+        return m_FlickerAvoid;
+    }
+
+    std::error_code RPICamera::setFlickerAvoid(FlickerAvoid flickerAvoid)
+    {
+        if (!isOpen())
+            return std::make_error_code(std::errc::not_connected);
+            
+        if (std::error_code accfae = applyCameraControlFlickerAvoid(flickerAvoid))
+        {
+            applyCameraControlFlickerAvoid(m_FlickerAvoid);
+            return accfae;
+        }
+        
+        m_FlickerAvoid = flickerAvoid;
+        m_bConfigurationChanged = true;
+        return std::error_code();
+	}
 
     std::error_code RPICamera::applyCameraControlSize(Vec2ui const &vsz, Vec2ui const &ssz)
     {
@@ -544,15 +882,23 @@ namespace rpiCam
 
         return std::error_code();
     }
-
-    std::error_code RPICamera::applyCameraControlSaturation(float saturation)
+    
+    std::error_code RPICamera::applyCameraControlBrightness(float brightness)
     {
-        MMAL_RATIONAL_T value = { static_cast<int>(saturation * 100), 100 };
-        if (mmal_port_parameter_set_rational(m_Camera->control, MMAL_PARAMETER_SATURATION, value) != MMAL_SUCCESS)
+        MMAL_RATIONAL_T value = { static_cast<int>(brightness * 100), 100 };
+        if (mmal_port_parameter_set_rational(m_Camera->control, MMAL_PARAMETER_BRIGHTNESS, value) != MMAL_SUCCESS)
             return std::make_error_code(std::errc::invalid_argument);
         return std::error_code();
     }
-
+    
+    std::error_code RPICamera::applyCameraControlContrast(float contrast)
+    {
+        MMAL_RATIONAL_T value = { static_cast<int>(contrast * 100), 100 };
+        if (mmal_port_parameter_set_rational(m_Camera->control, MMAL_PARAMETER_CONTRAST, value) != MMAL_SUCCESS)
+            return std::make_error_code(std::errc::invalid_argument);
+        return std::error_code();
+    }
+    
     std::error_code RPICamera::applyCameraControlSharpness(float sharpness)
     {
         MMAL_RATIONAL_T value = { static_cast<int>(sharpness * 100), 100 };
@@ -561,18 +907,10 @@ namespace rpiCam
         return std::error_code();
     }
 
-    std::error_code RPICamera::applyCameraControlContrast(float contrast)
+    std::error_code RPICamera::applyCameraControlSaturation(float saturation)
     {
-        MMAL_RATIONAL_T value = { static_cast<int>(contrast * 100), 100 };
-        if (mmal_port_parameter_set_rational(m_Camera->control, MMAL_PARAMETER_CONTRAST, value) != MMAL_SUCCESS)
-            return std::make_error_code(std::errc::invalid_argument);
-        return std::error_code();
-    }
-
-    std::error_code RPICamera::applyCameraControlBrightness(float brightness)
-    {
-        MMAL_RATIONAL_T value = { static_cast<int>(brightness * 100), 100 };
-        if (mmal_port_parameter_set_rational(m_Camera->control, MMAL_PARAMETER_BRIGHTNESS, value) != MMAL_SUCCESS)
+        MMAL_RATIONAL_T value = { static_cast<int>(saturation * 100), 100 };
+        if (mmal_port_parameter_set_rational(m_Camera->control, MMAL_PARAMETER_SATURATION, value) != MMAL_SUCCESS)
             return std::make_error_code(std::errc::invalid_argument);
         return std::error_code();
     }
@@ -583,6 +921,73 @@ namespace rpiCam
             return std::make_error_code(std::errc::invalid_argument);
         return std::error_code();
     }
+    
+    std::error_code RPICamera::applyCameraControlShutterSpeed(Duration shutterSpeed)
+    {
+        int value = std::chrono::duration_cast<std::chrono::microseconds>(shutterSpeed).count();
+        if (mmal_port_parameter_set_uint32(m_Camera->control, MMAL_PARAMETER_SHUTTER_SPEED, value) != MMAL_SUCCESS)
+            return std::make_error_code(std::errc::invalid_argument);
+        return std::error_code();
+    }
+    
+    std::error_code RPICamera::applyCameraControlAWBMode(AWBMode awbMode)
+    {
+        MMAL_PARAM_AWBMODE_T value = MMAL_PARAM_AWBMODE_T(MMAL_PARAM_AWBMODE_OFF + (static_cast<int>(awbMode) - static_cast<int>(AWBMode::Off)));
+        MMAL_PARAMETER_AWBMODE_T param = { { MMAL_PARAMETER_AWB_MODE, sizeof(param) }, value };
+        if (mmal_port_parameter_set(m_Camera->control, &param.hdr) != MMAL_SUCCESS)
+            return std::make_error_code(std::errc::invalid_argument);
+        return std::error_code();
+    }
+    
+    std::error_code RPICamera::applyCameraControlExposureCompensation(int exposureCompensation)
+    {
+        if (mmal_port_parameter_set_int32(m_Camera->control, MMAL_PARAMETER_EXPOSURE_COMP, exposureCompensation) != MMAL_SUCCESS)
+            return std::make_error_code(std::errc::invalid_argument);
+        return std::error_code();
+    }
+    
+    std::error_code RPICamera::applyCameraControlExposureMode(ExposureMode exposureMode)
+    {
+        MMAL_PARAM_EXPOSUREMODE_T value = MMAL_PARAM_EXPOSUREMODE_T(MMAL_PARAM_EXPOSUREMODE_OFF + (static_cast<int>(exposureMode) - static_cast<int>(ExposureMode::Off)));
+        MMAL_PARAMETER_EXPOSUREMODE_T param = { { MMAL_PARAMETER_EXPOSURE_MODE, sizeof(param) }, value };
+        if (mmal_port_parameter_set(m_Camera->control, &param.hdr) != MMAL_SUCCESS)
+            return std::make_error_code(std::errc::invalid_argument);
+        return std::error_code();
+    }
+    
+    std::error_code RPICamera::applyCameraControlExposureMeteringMode(ExposureMeteringMode exposureMeteringMode)
+    {
+        MMAL_PARAM_EXPOSUREMETERINGMODE_T value = MMAL_PARAM_EXPOSUREMETERINGMODE_T(MMAL_PARAM_EXPOSUREMETERINGMODE_AVERAGE + (static_cast<int>(exposureMeteringMode) - static_cast<int>(ExposureMeteringMode::Average)));
+        MMAL_PARAMETER_EXPOSUREMETERINGMODE_T param = { { MMAL_PARAMETER_EXP_METERING_MODE, sizeof(param) }, value };
+        if (mmal_port_parameter_set(m_Camera->control, &param.hdr) != MMAL_SUCCESS)
+            return std::make_error_code(std::errc::invalid_argument);
+        return std::error_code();
+    }
+    
+    std::error_code RPICamera::applyCameraControlAnalogGain(float gain)
+    {
+        MMAL_RATIONAL_T value = { static_cast<int>(gain * 65536), 65536 };
+        if (mmal_port_parameter_set_rational(m_Camera->control, MMAL_PARAMETER_ANALOG_GAIN, value) != MMAL_SUCCESS)
+            return std::make_error_code(std::errc::invalid_argument);
+        return std::error_code();
+    }
+
+    std::error_code RPICamera::applyCameraControlDigitalGain(float gain)
+    {
+        MMAL_RATIONAL_T value = { static_cast<int>(gain * 65536), 65536 };
+        if (mmal_port_parameter_set_rational(m_Camera->control, MMAL_PARAMETER_DIGITAL_GAIN, value) != MMAL_SUCCESS)
+            return std::make_error_code(std::errc::invalid_argument);
+        return std::error_code();
+    }
+
+    std::error_code RPICamera::applyCameraControlDRCStrength(DRCStrength drc)
+    {
+        MMAL_PARAMETER_DRC_STRENGTH_T value = MMAL_PARAMETER_DRC_STRENGTH_T(MMAL_PARAMETER_DRC_STRENGTH_OFF + (static_cast<int>(drc) - static_cast<int>(DRCStrength::Off)));
+        MMAL_PARAMETER_DRC_T param = { { MMAL_PARAMETER_DYNAMIC_RANGE_COMPRESSION, sizeof(param) }, value };
+        if (mmal_port_parameter_set(m_Camera->control, &param.hdr) != MMAL_SUCCESS)
+            return std::make_error_code(std::errc::invalid_argument);
+        return std::error_code();
+    }
 
     std::error_code RPICamera::applyCameraControlVideoStabilisation(bool videoStabilisation)
     {
@@ -590,69 +995,12 @@ namespace rpiCam
             return std::make_error_code(std::errc::invalid_argument);
         return std::error_code();
     }
-
-    std::error_code RPICamera::applyCameraControlExposureCompensation(int exposureCompensation)
+    
+    std::error_code RPICamera::applyCameraControlFlickerAvoid(FlickerAvoid flickerAvoid)
     {
-        if (mmal_port_parameter_set_int32(m_Camera->control, MMAL_PARAMETER_EXPOSURE_COMP, exposureCompensation) != MMAL_SUCCESS)
-            return std::make_error_code(std::errc::invalid_argument);
-        return std::error_code();
-    }
-
-    std::error_code RPICamera::applyCameraControlExposureMode(MMAL_PARAM_EXPOSUREMODE_T  exposureMode)
-    {
-        MMAL_PARAMETER_EXPOSUREMODE_T value = { { MMAL_PARAMETER_EXPOSURE_MODE, sizeof(value) }, exposureMode };
-        if (mmal_port_parameter_set(m_Camera->control, &value.hdr) != MMAL_SUCCESS)
-            return std::make_error_code(std::errc::invalid_argument);
-        return std::error_code();
-    }
-
-    std::error_code RPICamera::applyCameraControlFlickerAvoidMode(MMAL_PARAM_FLICKERAVOID_T  flickerAvoidMode)
-    {
-        MMAL_PARAMETER_FLICKERAVOID_T value = { { MMAL_PARAMETER_FLICKER_AVOID, sizeof(value) }, flickerAvoidMode };
-        if (mmal_port_parameter_set(m_Camera->control, &value.hdr) != MMAL_SUCCESS)
-            return std::make_error_code(std::errc::invalid_argument);
-        return std::error_code();
-    }
-
-    std::error_code RPICamera::applyCameraControlExposureMeteringMode(MMAL_PARAM_EXPOSUREMETERINGMODE_T  exposureMeteringMode)
-    {
-        MMAL_PARAMETER_EXPOSUREMETERINGMODE_T value = { { MMAL_PARAMETER_EXP_METERING_MODE, sizeof(value) }, exposureMeteringMode };
-        if (mmal_port_parameter_set(m_Camera->control, &value.hdr) != MMAL_SUCCESS)
-            return std::make_error_code(std::errc::invalid_argument);
-        return std::error_code();
-    }
-
-    std::error_code RPICamera::applyCameraControlAWBMode(MMAL_PARAM_AWBMODE_T  awbMode)
-    {
-        MMAL_PARAMETER_AWBMODE_T value = { { MMAL_PARAMETER_AWB_MODE, sizeof(value) }, awbMode };
-        if (mmal_port_parameter_set(m_Camera->control, &value.hdr) != MMAL_SUCCESS)
-            return std::make_error_code(std::errc::invalid_argument);
-        return std::error_code();
-    }
-
-    std::error_code RPICamera::applyCameraControlShutterSpeed(int shutterSpeed)
-    {
-        if (mmal_port_parameter_set_uint32(m_Camera->control, MMAL_PARAMETER_SHUTTER_SPEED, shutterSpeed) != MMAL_SUCCESS)
-            return std::make_error_code(std::errc::invalid_argument);
-        return std::error_code();
-    }
-
-    std::error_code RPICamera::applyCameraControlDRC(MMAL_PARAMETER_DRC_STRENGTH_T drc)
-    {
-        MMAL_PARAMETER_DRC_T value = { { MMAL_PARAMETER_DYNAMIC_RANGE_COMPRESSION, sizeof(value) }, drc };
-        if (mmal_port_parameter_set(m_Camera->control, &value.hdr) != MMAL_SUCCESS)
-            return std::make_error_code(std::errc::invalid_argument);
-        return std::error_code();
-    }
-
-    std::error_code RPICamera::applyCameraControlGains(float analog, float digital)
-    {
-        MMAL_RATIONAL_T analogValue = { static_cast<int>(analog * 65536), 65536 };
-        if (mmal_port_parameter_set_rational(m_Camera->control, MMAL_PARAMETER_ANALOG_GAIN, analogValue) != MMAL_SUCCESS)
-            return std::make_error_code(std::errc::invalid_argument);
-
-        MMAL_RATIONAL_T digitalValue = { static_cast<int>(digital * 65536), 65536 };
-        if (mmal_port_parameter_set_rational(m_Camera->control, MMAL_PARAMETER_DIGITAL_GAIN, digitalValue) != MMAL_SUCCESS)
+        MMAL_PARAM_FLICKERAVOID_T value = MMAL_PARAM_FLICKERAVOID_T(MMAL_PARAM_FLICKERAVOID_OFF + (static_cast<int>(flickerAvoid) - static_cast<int>(FlickerAvoid::Off)));
+        MMAL_PARAMETER_FLICKERAVOID_T param = { { MMAL_PARAMETER_FLICKER_AVOID, sizeof(param) }, value };
+        if (mmal_port_parameter_set(m_Camera->control, &param.hdr) != MMAL_SUCCESS)
             return std::make_error_code(std::errc::invalid_argument);
         return std::error_code();
     }
@@ -848,21 +1196,22 @@ namespace rpiCam
             return std::make_error_code(std::errc::io_error);
         }
 
-        applyCameraControlSaturation();
-        applyCameraControlSharpness();
-        applyCameraControlContrast();
-        applyCameraControlBrightness();
-        applyCameraControlISO();
-        applyCameraControlVideoStabilisation();
-        applyCameraControlExposureCompensation();
-        applyCameraControlExposureMode();
-        applyCameraControlFlickerAvoidMode();
-        applyCameraControlExposureMeteringMode();
-        applyCameraControlAWBMode();
-        applyCameraControlShutterSpeed();
-        applyCameraControlDRC();
-        applyCameraControlGains();
-
+        applyCameraControlBrightness(m_Brightness);
+        applyCameraControlContrast(m_Contrast);
+        applyCameraControlSharpness(m_Sharpness);
+        applyCameraControlSaturation(m_Saturation);
+        applyCameraControlISO(m_ISO);
+        applyCameraControlShutterSpeed(m_ShutterSpeed);
+        applyCameraControlAWBMode(m_AWBMode);
+        applyCameraControlExposureCompensation(m_ExposureCompensation);
+        applyCameraControlExposureMode(m_ExposureMode);
+        applyCameraControlExposureMeteringMode(m_ExposureMeteringMode);
+        applyCameraControlAnalogGain(m_AnalogGain);
+        applyCameraControlDigitalGain(m_DigitalGain);
+        applyCameraControlDRCStrength(m_DRCStrength);
+        applyCameraControlVideoStabilisation(m_VideoStabilisation);
+        applyCameraControlFlickerAvoid(m_FlickerAvoid);
+        
         RPI_LOG(DEBUG, "Camera::initializeCameraControlPort(): camera control port successfully initialized!");
 
         return std::error_code();

@@ -23,7 +23,61 @@ namespace rpiCam
             virtual void onCameraTakingSnapshotsStopped() {}
             virtual void onCameraVideoFrame(std::shared_ptr<PixelSampleBuffer> const &buffer) {}
             virtual void onCameraSnapshotTaken(std::shared_ptr<PixelSampleBuffer> const &buffer) {}
+        };
 
+        enum class AWBMode : int
+        {
+            Off,
+            Auto,
+            Sunlight,
+            Cloudy,
+            Shade,
+            Tungsten,
+            Fluorescent,
+            Incandescent,
+            Flash,
+            Horizon
+        };
+
+        enum class ExposureMode : int
+        {
+            Off,
+            Auto,
+            Night,
+            NightPreview,
+            Backlight,
+            Spotlight,
+            Sports,
+            Snow,
+            Beach,
+            VeryLong,
+            FixedFPS,
+            AntiShake,
+            Fireworks
+        };
+
+        enum class ExposureMeteringMode : int
+        {
+            Average,
+            Spot,
+            Backlit,
+            Matrix
+        };
+
+        enum class DRCStrength : int
+        {
+            Off,
+            Low,
+            Medium,
+            High
+        };
+
+        enum class FlickerAvoid : int
+        {
+            Off,
+            Auto,
+            At50Hz,
+            At60Hz
         };
 
         using CameraEvents = EventsDispatcher<Events>;
@@ -61,6 +115,51 @@ namespace rpiCam
         virtual std::error_code stopTakingSnapshots() = 0;
 
         virtual std::error_code takeSnapshot() = 0;
+
+        virtual float getBrightness() const = 0;
+        virtual std::error_code setBrightness(float brightness) = 0;
+
+        virtual float getContrast() const = 0;
+        virtual std::error_code setContrast(float contrast) = 0;
+
+        virtual float getSharpness() const = 0;
+        virtual std::error_code setSharpness(float sharpness) = 0;
+
+        virtual float getSaturation() const = 0;
+        virtual std::error_code setSaturation(float saturation) = 0;
+
+        virtual int getISO() const = 0;
+        virtual std::error_code setISO(int ISO) = 0;
+
+        virtual Duration getShutterSpeed() const = 0;
+        virtual std::error_code setShutterSpeed(Duration shutterSpeed) = 0;
+
+        virtual AWBMode getAWBMode() const = 0;
+        virtual std::error_code setAWBMode(AWBMode awbMode) = 0;
+
+        virtual int getExposureCompensation() const = 0;
+        virtual std::error_code setExposureCompensation(int exposureCompensation) = 0;
+
+        virtual ExposureMode getExposureMode() const = 0;
+        virtual std::error_code setExposureMode(ExposureMode exposureMode) = 0;
+
+        virtual ExposureMeteringMode getExposureMeteringMode() const = 0;
+        virtual std::error_code setExposureMeteringMode(ExposureMeteringMode exposureMeteringMode) = 0;
+
+        virtual float getAnalogGain() const = 0;
+        virtual std::error_code setAnalogGain(float gain) = 0;
+
+        virtual float getDigitalGain() const = 0;
+        virtual std::error_code setDigitalGain(float gain) = 0;
+
+        virtual DRCStrength getDRCStrength() const = 0;
+        virtual std::error_code setDRCStrength(DRCStrength strength) = 0;
+
+        virtual bool  getVideoStabilisation() const = 0;
+        virtual std::error_code setVideoStabilisation(bool videoStabilisation) = 0;
+
+        virtual FlickerAvoid getFlickerAvoid() const = 0;
+        virtual std::error_code setFlickerAvoid(FlickerAvoid flickerAvoid) = 0;
 
         inline CameraEvents const& cameraEvents() const { return m_CameraEvents; }
 
@@ -103,5 +202,21 @@ namespace rpiCam
     protected:
         CameraEvents m_CameraEvents;
     };
+    
+    extern std::istream& operator>>(std::istream &s, Camera::AWBMode &v);
+    extern std::ostream& operator<<(std::ostream &s, Camera::AWBMode v);
+    
+    extern std::istream& operator>>(std::istream &s, Camera::ExposureMode &v);
+    extern std::ostream& operator<<(std::ostream &s, Camera::ExposureMode v);
+    
+    extern std::istream& operator>>(std::istream &s, Camera::ExposureMeteringMode &v);
+    extern std::ostream& operator<<(std::ostream &s, Camera::ExposureMeteringMode v);
+    
+    extern std::istream& operator>>(std::istream &s, Camera::DRCStrength &v);
+    extern std::ostream& operator<<(std::ostream &s, Camera::DRCStrength v);
+    
+    extern std::istream& operator>>(std::istream &s, Camera::FlickerAvoid &v);
+    extern std::ostream& operator<<(std::ostream &s, Camera::FlickerAvoid v);
+    
 }
 
