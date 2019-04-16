@@ -67,16 +67,21 @@ int main(int argc, char *argv[])
 
     for(auto cam : cameras)
     {
-        cam->deviceEvents() += &cameraEvents;
-        cam->cameraEvents() += &cameraEvents;
-
-        if(!cam->open())
+        for(auto vs : videoSizes)
         {
-            std::cout << "camera: " << cam->name() << std::endl;
-            cam->setVideoFrameRate(Rational(200, 1));
-            cam->setVideoFormat(kPixelFormatYUV420);
-            for(auto vs : videoSizes)
+            cam->deviceEvents() += &cameraEvents;
+            cam->cameraEvents() += &cameraEvents;
+
+            if(!cam->open())
             {
+                if(!cam->startTakingSnapshots())
+                {
+                    cam->stopTakingSnapshots();
+                }
+
+                std::cout << "camera: " << cam->name() << std::endl;
+                cam->setVideoFrameRate(Rational(200, 1));
+                cam->setVideoFormat(kPixelFormatYUV420);
                 std::cout << "	estVideoFrameRate(" << vs(0) << "x" << vs(1) <<"): ";
 
                 cam->setVideoSize(vs);
@@ -90,8 +95,11 @@ int main(int argc, char *argv[])
                 {
                     std::cout << "NA" << std::endl;
                 }
+                cam->close();
             }
-            cam->close();
+
+            cam->deviceEvents() -= &cameraEvents;
+            cam->cameraEvents() -= &cameraEvents;
         }
     }
     return 0;

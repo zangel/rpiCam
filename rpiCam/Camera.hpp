@@ -21,8 +21,18 @@ namespace rpiCam
             virtual void onCameraVideoStopped() {}
             virtual void onCameraTakingSnapshotsStarted() {}
             virtual void onCameraTakingSnapshotsStopped() {}
+            virtual void onCameraRecordingStarted() {}
+            virtual void onCameraRecordingStopped() {}
             virtual void onCameraVideoFrame(std::shared_ptr<PixelSampleBuffer> const &buffer) {}
             virtual void onCameraSnapshotTaken(std::shared_ptr<PixelSampleBuffer> const &buffer) {}
+            virtual void onCameraRecordingBuffer(std::shared_ptr<SampleBuffer> const &buffer, std::uint32_t flags) {}
+        };
+
+        enum class RecordingBufferFlags : std::uint32_t
+        {
+            FrameEnd              = (1 << 0),
+            KeyFrame              = (1 << 1),
+            Config                = (1 << 2)
         };
 
         enum class AWBMode : int
@@ -161,6 +171,11 @@ namespace rpiCam
         virtual FlickerAvoid getFlickerAvoid() const = 0;
         virtual std::error_code setFlickerAvoid(FlickerAvoid flickerAvoid) = 0;
 
+        virtual std::error_code enableRecording() = 0;
+        virtual bool isRecordingEnabled() const = 0;
+        virtual std::error_code disableRecording() = 0;
+
+
         inline CameraEvents const& cameraEvents() const { return m_CameraEvents; }
 
     protected:
@@ -189,6 +204,16 @@ namespace rpiCam
             m_CameraEvents.dispatch(&Events::onCameraTakingSnapshotsStopped);
         }
 
+        inline void dispatchOnCameraRecordingStarted()
+        {
+            m_CameraEvents.dispatch(&Events::onCameraRecordingStarted);
+        }
+
+        inline void dispatchOnCameraRecordingStopped()
+        {
+            m_CameraEvents.dispatch(&Events::onCameraRecordingStopped);
+        }
+
         inline void dispatchOnCameraVideoFrame(std::shared_ptr<PixelSampleBuffer> const &buffer)
         {
             m_CameraEvents.dispatch(&Events::onCameraVideoFrame, buffer);
@@ -197,6 +222,11 @@ namespace rpiCam
         inline void dispatchOnCameraSnapshotTaken(std::shared_ptr<PixelSampleBuffer> const &buffer)
         {
             m_CameraEvents.dispatch(&Events::onCameraSnapshotTaken, buffer);
+        }
+
+        inline void dispatchOnCameraRecordingBuffer(std::shared_ptr<SampleBuffer> const &buffer, std::uint32_t flags)
+        {
+            m_CameraEvents.dispatch(&Events::onCameraRecordingBuffer, buffer, flags);
         }
 
     protected:

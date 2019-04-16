@@ -103,6 +103,10 @@ namespace rpiCam
         FlickerAvoid getFlickerAvoid() const override;
         std::error_code setFlickerAvoid(FlickerAvoid flickerAvoid) override;
 
+        std::error_code enableRecording() override;
+        bool isRecordingEnabled() const override;
+        std::error_code disableRecording() override;
+
     private:
         std::error_code applyCameraControlSize(Vec2ui const &vsz, Vec2ui const &ssz);
         std::error_code applyCameraControlBrightness(float brightness);
@@ -139,6 +143,11 @@ namespace rpiCam
         void disableVideoPort();
         void disableSnapshotPort();
 
+        std::error_code createEncoder();
+        std::error_code enableEncoder();
+        void disableEncoder();
+        void destroyEncoder();
+
         static void _mmalCameraControlCallback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer);
         void mmalCameraControlCallback(MMAL_BUFFER_HEADER_T *buffer);
 
@@ -148,11 +157,18 @@ namespace rpiCam
         static void _mmalCameraSnapshotBufferCallback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer);
         void mmalCameraSnapshotBufferCallback(MMAL_BUFFER_HEADER_T *buffer);
 
+        static void _mmalEncoderBufferCallback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer);
+        void mmalEncoderBufferCallback(MMAL_BUFFER_HEADER_T *buffer);
+
     private:
         std::shared_ptr<MMAL_COMPONENT_T> m_Camera;
         MMAL_PORT_T *m_PreviewPort;
         MMAL_PORT_T *m_VideoPort;
         MMAL_PORT_T *m_SnapshotPort;
+        std::shared_ptr<MMAL_COMPONENT_T> m_Encoder;
+        MMAL_PORT_T *m_EncoderInputPort;
+        MMAL_PORT_T *m_EncoderOutputPort;
+        MMAL_CONNECTION_T *m_EncoderInputConnection;
         std::string m_Name;
         std::list<ePixelFormat> m_SupportedVideoFormats;
         std::list<Vec2ui> m_SupportedVideoSizes;
@@ -180,6 +196,9 @@ namespace rpiCam
         DRCStrength m_DRCStrength;
         bool m_VideoStabilisation;
         FlickerAvoid m_FlickerAvoid;
+
+        bool m_RecordingEnabled;
+        Vec2ui m_RecordingSize;
                 
         bool m_bConfiguring;
         bool m_bConfigurationChanged;
@@ -187,5 +206,6 @@ namespace rpiCam
 
         MMAL_POOL_T *m_VideoBufferPool;
         MMAL_POOL_T *m_SnapshotBufferPool;
+        MMAL_POOL_T *m_EncoderBufferPool;
     };
 }

@@ -14,6 +14,12 @@ class CameraEvents
     , public Camera::Events
 {
 public:
+    CameraEvents()
+    : snapshotFileName("snapshot.ppm")
+    , recordingFileName("recording.h264")
+    {
+    }
+
     void onDeviceOpened() override
     {
         std::cout << "onDeviceOpened()" << std::endl;
@@ -168,9 +174,36 @@ public:
     {
         std::cout << "onCameraSnapshotTaken():" << std::endl;
         dumpBufferInfo(buffer);
-        saveBuffer(buffer, "snapshot.ppm");
+        saveBuffer(buffer, snapshotFileName);
         std::unique_lock<std::mutex> lk(mutex);
         cv.notify_one();
+    }
+
+    void onCameraRecordingStarted() override
+    {
+      if (recordingFile.is_open())
+        return;
+
+        recordingFile.open(recordingFileName, std::ios::binary);
+    }
+
+    void onCameraRecordingStopped() override
+    {
+      recordingFile.close();
+    }
+
+    void onCameraRecordingBuffer(std::shared_ptr<SampleBuffer> const &buffer, std::uint32_t flags) override
+    {
+      if (!recordingFile.is_open())
+        return;
+
+      if (buffer->lock())
+        return;
+
+      recordingFile.write(reinterpret_cast<char*>(buffer->data()), buffer->size()).flush();
+
+      buffer->unlock();
+
     }
 
     void dumpBufferInfo(std::shared_ptr<PixelSampleBuffer> const &buffer)
@@ -202,8 +235,12 @@ public:
         cv.wait(lk);
     }
 
+    std::string snapshotFileName;
     std::mutex mutex;
     std::condition_variable cv;
+
+    std::string recordingFileName;
+    std::ofstream recordingFile;
 };
 
 int main(int argc, char *argv[])
@@ -220,22 +257,33 @@ int main(int argc, char *argv[])
 
         if(!cam->open())
         {
-            cam->setVideoSize(Vec2ui(2592, 1944));
+
+            /*
+            cam->setVideoSize(Vec2ui(3280, 2464));
             cam->setVideoFrameRate(Rational(10, 1));
             if(!cam->startVideo())
             {
                 std::this_thread::sleep_for(std::chrono::seconds(4));
                 cam->stopVideo();
             }
+            */
             // set low resolution so snapshot port pool allocation succeeds
             cam->setVideoSize(Vec2ui(640, 480));
-
-            cam->setSnapshotSize(Vec2ui(3280, 2464));
+            cam->setSnapshotSize(Vec2ui(2592, 1944));
+            cam->enableRecording();
             if(!cam->startTakingSnapshots())
             {
-                std::this_thread::sleep_for(std::chrono::seconds(1));
+                std::this_thread::sleep_for(std::chrono::seconds(2));
+                cameraEvents.snapshotFileName = "snapshot1.ppm";
                 cam->takeSnapshot();
                 cameraEvents.waitForSnapshot();
+                /*
+                cameraEvents.snapshotFileName = "snapshot2.ppm";
+                std::cout << cam->setAnalogGain(0.5f) << std::endl;
+                std::this_thread::sleep_for(std::chrono::seconds(2));
+                cam->takeSnapshot();
+                cameraEvents.waitForSnapshot();
+                */
                 cam->stopTakingSnapshots();
             }
             cam->close();

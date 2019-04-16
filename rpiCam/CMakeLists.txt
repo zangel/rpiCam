@@ -18,6 +18,7 @@ set(rpiCam_headers
 
 set(rpiCam_headers_private
     rpi/RPICamera.hpp
+    rpi/RPISampleBuffer.hpp
     rpi/RPIPixelSampleBuffer.hpp
 )
 
@@ -35,6 +36,7 @@ set(rpiCam_sources
 
 set(rpiCam_sources_private
     rpi/RPICamera.cpp
+    rpi/RPISampleBuffer.cpp
     rpi/RPIPixelSampleBuffer.cpp
 )
 
